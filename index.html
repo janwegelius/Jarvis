@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d0524">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JARVIS">
+<title>J.A.R.V.I.S</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; background:#070414; }
+  body {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'Segoe UI', Consolas, monospace; touch-action:none; user-select:none;
+    background:radial-gradient(ellipse at 50% 42%, #170a30 0%, #0d0524 45%, #070414 100%);
+  }
+  #stars { position:fixed; inset:0; z-index:0; }
+  .cloud { position:fixed; z-index:0; border-radius:50%; filter:blur(70px); opacity:.5; }
+  .c1 { width:60vmin;height:44vmin;left:-12vmin;top:8vmin;
+        background:radial-gradient(circle, rgba(199,125,255,.55), transparent 70%);
+        animation:drift1 26s ease-in-out infinite alternate; }
+  .c2 { width:56vmin;height:40vmin;right:-14vmin;bottom:6vmin;
+        background:radial-gradient(circle, rgba(255,94,120,.45), transparent 70%);
+        animation:drift2 31s ease-in-out infinite alternate; }
+  .c3 { width:46vmin;height:34vmin;right:6vmin;top:-8vmin;
+        background:radial-gradient(circle, rgba(255,157,69,.35), transparent 70%);
+        animation:drift1 38s ease-in-out infinite alternate-reverse; }
+  @keyframes drift1 { from{transform:translate(0,0) scale(1)} to{transform:translate(6vmin,4vmin) scale(1.15)} }
+  @keyframes drift2 { from{transform:translate(0,0) scale(1.1)} to{transform:translate(-5vmin,-4vmin) scale(.95)} }
+
+  .stage { position:relative; z-index:2; width:min(78vmin,470px); height:min(78vmin,470px); }
+  .halo {
+    position:absolute; inset:10%; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,157,69,.30) 0%, rgba(255,94,120,.16) 42%, rgba(199,125,255,.10) 58%, transparent 72%);
+    animation:breathe 3.2s ease-in-out infinite; filter:blur(8px);
+  }
+  @keyframes breathe { 0%,100%{transform:scale(.94);opacity:.75} 50%{transform:scale(1.05);opacity:1} }
+  svg { position:absolute; inset:0; width:100%; height:100%; }
+  .r-slow  { animation:spin 42s linear infinite; transform-origin:250px 250px; }
+  .r-med   { animation:spinrev 16s linear infinite; transform-origin:250px 250px; }
+  .r-fast  { animation:spin 7s linear infinite; transform-origin:250px 250px; }
+  .r-ticks { animation:spinrev 90s linear infinite; transform-origin:250px 250px; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  @keyframes spinrev { to{transform:rotate(-360deg)} }
+  .core { animation:corepulse 3.2s ease-in-out infinite; transform-origin:250px 250px; }
+  @keyframes corepulse { 0%,100%{opacity:.85} 50%{opacity:1} }
+  .wave { opacity:0; transform-origin:250px 250px; }
+  .burst .wave { animation:waveout .7s ease-out forwards; }
+  @keyframes waveout { 0%{opacity:.95;transform:scale(.25)} 100%{opacity:0;transform:scale(1.25)} }
+  .burst .halo { animation:none; transform:scale(1.12); opacity:1; transition:.15s; }
+  .burst .core { animation:none; opacity:1; }
+
+  .title {
+    margin-top:1vmin; z-index:2; color:#ffd9b3; letter-spacing:.55em; font-weight:300;
+    font-size:clamp(15px,3.4vmin,26px); text-indent:.55em; text-align:center;
+    text-shadow:0 0 14px rgba(255,157,69,.85), 0 0 40px rgba(255,94,120,.4);
+  }
+  .status {
+    margin-top:1.6vmin; z-index:2; color:#a97fa8; font-size:clamp(9px,1.9vmin,14px);
+    letter-spacing:.35em; text-indent:.35em; text-align:center;
+  }
+  .status b { color:#ffb36b; font-weight:600; }
+  .flicker { animation:flick 4s steps(1) infinite; }
+  @keyframes flick { 0%,93%,95%,100%{opacity:1} 94%{opacity:.35} }
+
+  .btnrow { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:4vmin; z-index:2; padding:0 16px; }
+  .btn {
+    min-height:44px; border-radius:999px; padding:10px 24px; cursor:pointer;
+    font-family:inherit; font-size:13px; letter-spacing:.18em; text-indent:.18em;
+    color:#ffd9b3; background:rgba(27,16,48,.8); border:1px solid rgba(138,77,191,.6);
+    transition:transform .08s;
+  }
+  .btn:active { transform:scale(.95); }
+  .btn.mic-on { box-shadow:0 0 18px rgba(255,157,69,.45); }
+  .btn.install { display:none; color:#ffe0b3; background:rgba(42,21,8,.8);
+                 border-color:rgba(255,157,69,.7); box-shadow:0 0 18px rgba(255,157,69,.5); }
+  .btn.install.show { display:inline-block; }
+  #micerr { color:#ff5e78; font-size:11px; letter-spacing:.1em; margin-top:12px; z-index:2;
+            text-align:center; display:none; }
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+
+<div class="stage" id="stage">
+  <div class="halo" id="halo"></div>
+  <svg viewBox="0 0 500 500">
+    <defs>
+      <radialGradient id="gcore" cx="50%" cy="50%" r="50%">
+        <stop offset="0%"  stop-color="#fff7ea"/>
+        <stop offset="30%" stop-color="#ffd166"/>
+        <stop offset="62%" stop-color="#ff8c2f"/>
+        <stop offset="100%" stop-color="#c92a12"/>
+      </radialGradient>
+      <radialGradient id="ginner" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="rgba(255,190,120,.92)"/>
+        <stop offset="100%" stop-color="rgba(255,120,60,0)"/>
+      </radialGradient>
+    </defs>
+
+    <circle class="wave" cx="250" cy="250" r="205" fill="none" stroke="#ffb36b" stroke-width="2.5"/>
+
+    <g class="r-ticks" stroke="#7a4f9e" stroke-width="1.4" opacity=".75">
+      <circle cx="250" cy="250" r="238" fill="none" stroke-dasharray="2 10"/>
+      <circle cx="250" cy="250" r="228" fill="none" stroke-dasharray="26 88" opacity=".5"/>
+    </g>
+
+    <g class="r-med" fill="none" stroke-linecap="round">
+      <circle cx="250" cy="250" r="196" stroke="#2b1638" stroke-width="10"/>
+      <path d="M 250 54 A 196 196 0 0 1 419 152" stroke="#ff9d45" stroke-width="10"/>
+      <path d="M 250 446 A 196 196 0 0 1 81 348" stroke="#ff5e78" stroke-width="10"/>
+      <circle cx="446" cy="250" r="5" fill="#ffe0b3" stroke="none"/>
+      <circle cx="54"  cy="250" r="5" fill="#ffb3d9" stroke="none"/>
+    </g>
+
+    <g class="r-fast" fill="none" stroke-linecap="round">
+      <circle cx="250" cy="250" r="158" stroke="#241233" stroke-width="4"/>
+      <path d="M 250 92 A 158 158 0 0 1 372 158" stroke="#ffb36b" stroke-width="4"/>
+      <path d="M 250 408 A 158 158 0 0 1 128 342" stroke="#c77dff" stroke-width="4"/>
+      <path d="M 128 158 A 158 158 0 0 1 372 342" stroke="#8a4dbf" stroke-width="2.5" stroke-dasharray="4 14"/>
+      <circle cx="250" cy="92"  r="4.5" fill="#fff3dd" stroke="none"/>
+      <circle cx="250" cy="408" r="4.5" fill="#ffd6ec" stroke="none"/>
+    </g>
+
+    <g class="r-slow" fill="none" stroke="#3a1f4d" stroke-width="1.6" opacity=".85">
+      <circle cx="250" cy="250" r="212" stroke-dasharray="60 30 6 30"/>
+      <circle cx="250" cy="38"  r="3" fill="#ff9d45" stroke="none"/>
+    </g>
+
+    <g class="r-med" opacity=".9">
+      <path d="M 250 128 L 344 286 L 156 286 Z" fill="none" stroke="#ffb36b" stroke-width="2.2" stroke-linejoin="round"/>
+      <path d="M 250 154 L 321 278 L 179 278 Z" fill="none" stroke="#8a4dbf" stroke-width="1.4" stroke-linejoin="round"/>
+    </g>
+
+    <g class="core" id="coreg">
+      <g id="corescale">
+        <circle cx="250" cy="250" r="74" fill="url(#ginner)"/>
+        <circle cx="250" cy="250" r="46" fill="url(#gcore)"/>
+        <circle cx="250" cy="250" r="46" fill="none" stroke="#ffe8c7" stroke-width="1.6" opacity=".9"/>
+        <circle cx="250" cy="250" r="16" fill="#ffffff" opacity=".95"/>
+      </g>
+      <circle cx="250" cy="250" r="86" fill="none" stroke="#7a4f9e" stroke-width="1" stroke-dasharray="3 6" opacity=".8"/>
+    </g>
+  </svg>
+</div>
+
+<div class="title flicker">J.A.R.V.I.S</div>
+<div class="status">SYSTEMI <b id="state">VALMIINA</b> · ÄÄNI <span id="meter">▯▯▯▯▯</span> · <span id="clock">--:--:--</span></div>
+
+<div class="btnrow">
+  <button class="btn" id="micbtn">🎙 AKTIVOI ÄÄNI</button>
+  <button class="btn install" id="installbtn">📱 ASENNNA SOVELLUKSEKSI</button>
+</div>
+<div id="micerr">Mikrofonin käyttö estetty — salli selaimen asetuksista</div>
+
+<script>
+  /* ---------- starfield ---------- */
+  const cv = document.getElementById('stars'), ctx = cv.getContext('2d');
+  let stars = [];
+  function initStars(){
+    cv.width = innerWidth; cv.height = innerHeight;
+    stars = Array.from({length:110}, () => ({
+      x: Math.random()*cv.width, y: Math.random()*cv.height,
+      r: Math.random()*1.4+.3, p: Math.random()*Math.PI*2, s:.4+Math.random()*1.6,
+      warm: Math.random() < .25
+    }));
+  }
+  function drawStars(t){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    for (const st of stars){
+      const tw = .35 + .65*(0.5+0.5*Math.sin(t/700*st.s+st.p));
+      ctx.globalAlpha = tw*.9;
+      ctx.fillStyle = st.warm ? '#ffd9a8' : '#cfe6ff';
+      ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(drawStars);
+  }
+  initStars(); requestAnimationFrame(drawStars);
+  addEventListener('resize', initStars);
+
+  /* ---------- clock ---------- */
+  const clock = document.getElementById('clock');
+  setInterval(()=>{ clock.textContent = new Date().toLocaleTimeString('fi-FI'); }, 500);
+
+  /* ---------- tap ping ---------- */
+  const stage = document.getElementById('stage');
+  const stateEl = document.getElementById('state');
+  let listening = false, micOn = false, cooldown = false;
+  function ping(){
+    if (cooldown) return; cooldown = true;
+    stage.classList.remove('burst'); void stage.offsetWidth; stage.classList.add('burst');
+    if (!micOn){ listening = !listening; stateEl.textContent = listening ? 'KUUNTELEE' : 'VALMIINA'; }
+    setTimeout(()=>stage.classList.remove('burst'), 720);
+    setTimeout(()=>cooldown = false, 120);
+  }
+  stage.addEventListener('pointerdown', ping);
+  addEventListener('keydown', e=>{ if(e.code==='Space') ping(); });
+
+  /* ---------- microphone reactivity ---------- */
+  const meter = document.getElementById('meter');
+  const coreScale = document.getElementById('corescale');
+  const halo = document.getElementById('halo');
+  const micbtn = document.getElementById('micbtn');
+  const micerr = document.getElementById('micerr');
+  let audio = null, lv = 0;
+
+  function loop(){
+    const sc = 1 + Math.min(.22, lv*.5);
+    coreScale.setAttribute('transform', `scale(${sc.toFixed(3)}) ` );
+    coreScale.style.transformOrigin = '250px 250px';
+    halo.style.opacity = (0.75 + Math.min(.25, lv*.6)).toFixed(2);
+    meter.textContent = '▮'.repeat(Math.min(5, Math.round(lv*12))) + '▯'.repeat(5 - Math.min(5, Math.round(lv*12)));
+    if (micOn){
+      const loud = lv > .09;
+      listening = loud;
+      stateEl.textContent = loud ? 'KUUNTELEE' : 'VALMIINA';
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  micbtn.addEventListener('click', async () => {
+    micerr.style.display = 'none';
+    if (audio){
+      audio.stream.getTracks().forEach(t=>t.stop());
+      await audio.ctx.close();
+      audio = null; lv = 0; micOn = false;
+      micbtn.classList.remove('mic-on');
+      micbtn.textContent = '🎙 AKTIVOI ÄÄNI';
+      coreScale.removeAttribute('transform');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      const actx = new AudioContext();
+      const src = actx.createMediaStreamSource(stream);
+      const an = actx.createAnalyser(); an.fftSize = 512;
+      src.connect(an);
+      const buf = new Float32Array(an.fftSize);
+      (function read(){
+        an.getFloatTimeDomainData(buf);
+        let sum = 0; for (let i=0;i<buf.length;i++) sum += buf[i]*buf[i];
+        lv = Math.sqrt(sum/buf.length);
+        requestAnimationFrame(read);
+      })();
+      audio = { ctx: actx, stream };
+      micOn = true;
+      micbtn.classList.add('mic-on');
+      micbtn.textContent = '🎙 MIKKI PÄÄLLÄ — POISTA';
+    } catch (err) {
+      micerr.style.display = 'block';
+    }
+  });
+
+  /* ---------- PWA install ---------- */
+  const installBtn = document.getElementById('installbtn');
+  let deferred = null;
+  addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); deferred = e;
+    installBtn.classList.add('show');
+  });
+  installBtn.addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice;
+    deferred = null;
+    installBtn.classList.remove('show');
+  });
+  addEventListener('appinstalled', () => installBtn.classList.remove('show'));
+
+  /* ---------- service worker ---------- */
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
+</script>
+</body>
+</html>
