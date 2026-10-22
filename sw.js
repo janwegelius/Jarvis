@@ -1,5 +1,5 @@
 /* J.A.R.V.I.S service worker - cache shell for offline orb */
-const CACHE = 'jarvis-v2';
+const CACHE = 'jarvis-v5';
 const SHELL = ['./', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

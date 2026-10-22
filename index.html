@@ -83,6 +83,53 @@
   .btn.install.show { display:inline-block; }
   #micerr { color:#ff5e78; font-size:11px; letter-spacing:.1em; margin-top:12px; z-index:2;
             text-align:center; display:none; }
+
+  /* ---------- chat + asetukset ---------- */
+  .gear { position:fixed; top:calc(12px + env(safe-area-inset-top)); right:14px; z-index:6;
+          width:40px; height:40px; border-radius:50%; cursor:pointer;
+          background:rgba(27,16,48,.75); border:1px solid rgba(138,77,191,.55);
+          color:#a97fa8; font-size:17px; font-family:inherit; }
+  .overlay { position:fixed; inset:0; z-index:8; display:none; touch-action:auto; }
+  .overlay.open { display:flex; flex-direction:column; justify-content:flex-end; }
+  .bg { position:absolute; inset:0; background:rgba(7,4,20,.74); backdrop-filter:blur(7px); }
+  .panel { position:relative; z-index:1; display:flex; flex-direction:column; gap:10px;
+           background:rgba(19,10,36,.94); border-top:1px solid rgba(255,157,69,.4);
+           border-radius:20px 20px 0 0; padding:14px 14px calc(16px + env(safe-area-inset-bottom)); }
+  #chatwrap .panel { height:74vh; }
+  #setwrap .panel { max-height:86vh; overflow-y:auto; }
+  .head { display:flex; align-items:center; justify-content:space-between;
+          color:#ffd9b3; letter-spacing:.32em; text-indent:.32em; font-size:12px; }
+  .x { cursor:pointer; color:#a97fa8; font-size:15px; padding:6px 10px; letter-spacing:0; text-indent:0; }
+  .chatlog { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;
+             padding:4px 2px; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
+  .msg { max-width:88%; padding:9px 13px; border-radius:15px; font-size:14px; line-height:1.5;
+         white-space:pre-wrap; word-break:break-word; user-select:text; }
+  .msg.user { align-self:flex-end; background:rgba(255,140,47,.17); border:1px solid rgba(255,157,69,.5);
+              color:#ffe8d1; border-bottom-right-radius:4px; }
+  .msg.jarvis { align-self:flex-start; background:rgba(199,125,255,.13); border:1px solid rgba(138,77,191,.55);
+                color:#efe3ff; border-bottom-left-radius:4px; }
+  .msg.sys { align-self:center; background:none; border:none; color:#ff8fa3; font-size:11px;
+             letter-spacing:.06em; text-align:center; }
+  .typing { animation:blink 1s steps(2) infinite; letter-spacing:.35em; }
+  @keyframes blink { 50% { opacity:.35; } }
+  .row { display:flex; gap:8px; }
+  .rbtn { width:48px; min-height:48px; border-radius:50%; flex:0 0 48px; cursor:pointer;
+          font-family:inherit; font-size:17px; color:#ffd9b3; background:rgba(27,16,48,.85);
+          border:1px solid rgba(138,77,191,.6); }
+  .rbtn.on { box-shadow:0 0 16px rgba(255,94,120,.65); border-color:rgba(255,94,120,.85); color:#ff8fa8; }
+  .chatrow input { flex:1; min-width:0; border-radius:999px; border:1px solid rgba(138,77,191,.6);
+                   background:rgba(7,4,20,.85); color:#ffe8d1; padding:0 18px; font-family:inherit;
+                   font-size:14px; outline:none; user-select:text; }
+  .chatrow input:focus { border-color:rgba(255,157,69,.75); }
+  .lbl { color:#a97fa8; font-size:11px; letter-spacing:.18em; margin-top:4px; }
+  .inp { min-height:44px; border-radius:12px; border:1px solid rgba(138,77,191,.6);
+         background:rgba(7,4,20,.85); color:#ffe8d1; padding:0 14px; font-family:inherit;
+         font-size:14px; outline:none; user-select:text; }
+  .chk { display:flex; align-items:center; gap:10px; color:#ffd9b3; font-size:13px; letter-spacing:.04em; }
+  .chk input { width:18px; height:18px; accent-color:#ff8c2f; }
+  .setrow { display:flex; gap:10px; justify-content:center; margin-top:6px; }
+  #testout { text-align:center; color:#a97fa8; font-size:11px; letter-spacing:.1em; min-height:14px; }
+  .hint { color:#7a6f96; font-size:10px; letter-spacing:.05em; text-align:center; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -156,9 +203,46 @@
 
 <div class="btnrow">
   <button class="btn" id="micbtn">🎙 AKTIVOI ÄÄNI</button>
+  <button class="btn" id="chatopen">💬 CHAT</button>
   <button class="btn install" id="installbtn">📱 ASENNNA SOVELLUKSEKSI</button>
 </div>
 <div id="micerr">Mikrofonin käyttö estetty — salli selaimen asetuksista</div>
+<button class="gear" id="setbtn" title="Asetukset">⚙</button>
+
+<div class="overlay" id="chatwrap">
+  <div class="bg" id="chatbg"></div>
+  <div class="panel">
+    <div class="head"><span>J.A.R.V.I.S · CHAT</span><span class="x" id="chatclose">✕</span></div>
+    <div class="chatlog" id="chatlog"></div>
+    <div class="row chatrow">
+      <button class="rbtn" id="talkbtn" title="Puhu">🎙</button>
+      <input id="chatinput" type="text" placeholder="Kirjoita tai puhu..." autocomplete="off">
+      <button class="rbtn" id="sendbtn" title="Lähetä">▸</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="setwrap">
+  <div class="bg" id="setbg"></div>
+  <div class="panel">
+    <div class="head"><span>ASETUKSET</span><span class="x" id="setclose">✕</span></div>
+    <div class="lbl">AIVOT — VALITSE MOOTTORI</div>
+    <label class="chk"><input type="radio" name="engine" id="engpoll" value="pollinations"> Pollinations — ilmainen &amp; rajaton, ei avainta</label>
+    <label class="chk"><input type="radio" name="engine" id="enggem" value="gemini"> Google Gemini — vahvempi ajattelu 🔥</label>
+    <div class="lbl">AVAIN (vain Gemini)</div>
+    <input class="inp" id="apikey" type="password" placeholder="Ei tarvita Pollinationsilla" autocomplete="off">
+    <div class="lbl">MALLI (voi jättää tyhjäksi)</div>
+    <input class="inp" id="model" type="text" placeholder="openai-fast" autocomplete="off">
+    <label class="chk"><input type="checkbox" id="ttschk"> JARVIS puhuu vastaukset</label>
+    <label class="chk"><input type="checkbox" id="autochk"> Lähetä puhe automaattisesti</label>
+    <div class="setrow">
+      <button class="btn" id="testconn">🔌 TESTAA</button>
+      <button class="btn" id="saveset">💾 TALLENNA</button>
+    </div>
+    <div id="testout"></div>
+    <div class="hint" id="enghint"></div>
+  </div>
+</div>
 
 <script>
   /* ---------- starfield ---------- */
@@ -197,7 +281,7 @@
   function ping(){
     if (cooldown) return; cooldown = true;
     stage.classList.remove('burst'); void stage.offsetWidth; stage.classList.add('burst');
-    if (!micOn){ listening = !listening; stateEl.textContent = listening ? 'KUUNTELEE' : 'VALMIINA'; }
+    if (!micOn && !busy){ listening = !listening; stateEl.textContent = listening ? 'KUUNTELEE' : 'VALMIINA'; }
     setTimeout(()=>stage.classList.remove('burst'), 720);
     setTimeout(()=>cooldown = false, 120);
   }
@@ -218,7 +302,7 @@
     coreScale.style.transformOrigin = '250px 250px';
     halo.style.opacity = (0.75 + Math.min(.25, lv*.6)).toFixed(2);
     meter.textContent = '▮'.repeat(Math.min(5, Math.round(lv*12))) + '▯'.repeat(5 - Math.min(5, Math.round(lv*12)));
-    if (micOn){
+    if (micOn && !busy){
       const loud = lv > .09;
       listening = loud;
       stateEl.textContent = loud ? 'KUUNTELEE' : 'VALMIINA';
@@ -275,6 +359,284 @@
     installBtn.classList.remove('show');
   });
   addEventListener('appinstalled', () => installBtn.classList.remove('show'));
+
+  /* ================= CHAT + TEKOÄLY + PUHE ================= */
+  const $ = id => document.getElementById(id);
+  const chatWrap = $('chatwrap'), chatLog = $('chatlog'), chatInput = $('chatinput');
+  const sendBtn = $('sendbtn'), talkBtn = $('talkbtn');
+  const setWrap = $('setwrap');
+  const keyIn = $('apikey'), modelIn = $('model');
+  const engPoll = $('engpoll'), engGem = $('enggem'), engHint = $('enghint');
+  const ttsChk = $('ttschk'), autoChk = $('autochk'), testOut = $('testout');
+
+  let busy = null;              /* null | KUUNTELEE | AJATTELEE | PUHUU */
+  let history = [];             /* {role: 'user'|'model', text} */
+  const LS = {
+    get(k, d){ try { const v = JSON.parse(localStorage.getItem(k)); return v === null || v === undefined ? d : v; } catch(e){ return d; } },
+    set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+  };
+
+  const cfg = {
+    engine: LS.get('jarvis_engine', 'pollinations'),
+    key:    LS.get('jarvis_key', ''),
+    model:  LS.get('jarvis_model', ''),
+    tts:    LS.get('jarvis_tts', true),
+    auto:   LS.get('jarvis_auto', true)
+  };
+  history = LS.get('jarvis_chat', []);
+
+  function saveCfg(){ LS.set('jarvis_engine',cfg.engine); LS.set('jarvis_key',cfg.key); LS.set('jarvis_model',cfg.model); LS.set('jarvis_tts',cfg.tts); LS.set('jarvis_auto',cfg.auto); }
+  function saveChat(){ LS.set('jarvis_chat', history.slice(-40)); }
+
+  function setBusy(s){
+    busy = s;
+    stateEl.textContent = s || (micOn ? (lv > .09 ? 'KUUNTELEE' : 'VALMIINA') : (listening ? 'KUUNTELEE' : 'VALMIINA'));
+    stateEl.style.color = s === 'AJATTELEE' ? '#c77dff' : s === 'PUHUU' ? '#ff9d45' : s === 'KUUNTELEE' ? '#ff8fa8' : '#ffb36b';
+  }
+
+  /* ---------- chat UI ---------- */
+  function addMsg(role, text){
+    const d = document.createElement('div');
+    d.className = 'msg ' + role;
+    d.textContent = text;
+    chatLog.appendChild(d);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return d;
+  }
+  function renderChat(){
+    chatLog.innerHTML = '';
+    if (!history.length) addMsg('sys', 'Kirjoita viesti tai napauta 🎙 ja puhu');
+    for (const m of history) addMsg(m.role === 'user' ? 'user' : 'jarvis', m.text);
+  }
+  chatWrap.classList; /* noop */
+  $('chatopen').addEventListener('click', () => { chatWrap.classList.add('open'); renderChat(); setTimeout(()=>chatInput.focus(), 300); });
+  $('chatclose').addEventListener('click', () => chatWrap.classList.remove('open'));
+  $('chatbg').addEventListener('click', () => chatWrap.classList.remove('open'));
+
+  $('setbtn').addEventListener('click', () => {
+    engPoll.checked = cfg.engine !== 'gemini'; engGem.checked = cfg.engine === 'gemini';
+    keyIn.value = cfg.key; modelIn.value = cfg.model;
+    ttsChk.checked = cfg.tts; autoChk.checked = cfg.auto;
+    testOut.textContent = ''; testOut.style.color = '#a97fa8';
+    syncEngineUI();
+    setWrap.classList.add('open');
+  });
+  $('setclose').addEventListener('click', () => setWrap.classList.remove('open'));
+  $('setbg').addEventListener('click', () => setWrap.classList.remove('open'));
+  function saveSet(){
+    cfg.engine = engGem.checked ? 'gemini' : 'pollinations';
+    cfg.key = keyIn.value.trim();
+    cfg.model = modelIn.value.trim();
+    cfg.tts = ttsChk.checked; cfg.auto = autoChk.checked;
+    saveCfg();
+    testOut.textContent = 'TALLENNETTU ✓'; testOut.style.color = '#7ee2a8';
+  }
+  $('saveset').addEventListener('click', saveSet);
+
+  /* ---------- TEKOÄLY: moottorit — Pollinations (ilmainen) & Gemini (tehokas) ---------- */
+  const AI_URL = 'https://text.pollinations.ai/openai';
+  const PERSONA = 'Olet J.A.R.V.I.S, Wegelle henkilökohtainen tekoälyavustaja. Vastaa aina suomeksi. Ole tiivis: 1-4 lausetta ellei erikseen pyydetä pidempää vastausta. Olet tyylikäs, ystävällinen ja hienovaraisen ironinen — kuten Iron Man -elokuvien Jarvis. Osoita käyttäjäästä nimellä Wege silloin tällöin. Vastauksesi on puhuttua tekstiä: ei markdownia, ei listoja, ei hymiöitä, ei tähtimerkkejä. Älä väitä tietäväsi asioita, joita et tiedä.';
+
+  const ENGINE_DEFAULTS = {
+    pollinations: {
+      model: 'openai-fast',
+      keyph: 'Ei tarvita Pollinationsilla',
+      hint: 'Pollinations: ilmainen & rajaton, ei avainta, ei kiintiötä. Jos viestejä tulee nopeasti, JARVIS miettii hetken ja vastaa silti itsestään.'
+    },
+    gemini: {
+      model: 'gemini-2.5-flash',
+      keyph: 'AIza... — ilmainen avain: aistudio.google.com',
+      hint: 'Gemini: selvästi vahvempi ajattelu. Ilmainen avain: aistudio.google.com → Get API key (2 min). Avain jää vain tähän laitteeseen — ei mihinkään muualle.'
+    }
+  };
+
+  function syncEngineUI(){
+    const eng = engGem.checked ? 'gemini' : 'pollinations';
+    const d = ENGINE_DEFAULTS[eng];
+    keyIn.placeholder = d.keyph;
+    modelIn.placeholder = d.model;
+    engHint.textContent = d.hint;
+  }
+  engPoll.addEventListener('change', syncEngineUI);
+  engGem.addEventListener('change', syncEngineUI);
+
+  function askOnce(msgs, signal){
+    return fetch(AI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: signal,
+      body: JSON.stringify({ model: cfg.model || 'openai', messages: msgs, referrer: 'janwegelius-github-io', private: true })
+    });
+  }
+
+  /* automaattinen uudelleenyritys: 0 s / +3 s / +31 s — ruuhkakin ohittaa itse */
+  async function askPollinations(msgs, ctrl){
+    let res = null, data = {};
+    for (let attempt = 0; attempt < 3; attempt++){
+      if (attempt) await new Promise(r => setTimeout(r, attempt === 1 ? 3000 : 31000));
+      res = await askOnce(msgs, ctrl ? ctrl.signal : undefined);
+      if (res.ok){ data = await res.json().catch(()=>({})); break; }
+      if ([429, 402, 500, 502, 503].indexOf(res.status) === -1) break;
+    }
+    const status = res ? res.status : 0;
+    let reply = '';
+    try { reply = ((((data.choices || [])[0] || {}).message || {}).content) || ''; } catch(e){}
+    reply = String(reply).replace(/[*_#`>]/g, '').trim();
+    return { ok: res ? res.ok : false, status: status, reply: reply };
+  }
+
+  async function askGemini(msgs, ctrl){
+    if (!cfg.key) return { ok: false, status: 0, reply: '', needkey: true };
+    const sys = msgs.filter(m => m.role === 'system')[0];
+    const rest = msgs.filter(m => m.role !== 'system');
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(cfg.model || 'gemini-2.5-flash') + ':generateContent?key=' + encodeURIComponent(cfg.key), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: ctrl ? ctrl.signal : undefined,
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: sys ? sys.content : PERSONA }] },
+        contents: rest.map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] })),
+        generationConfig: { temperature: 0.7, maxOutputTokens: 400 }
+      })
+    });
+    const data = await res.json().catch(()=>({}));
+    let reply = '';
+    try { reply = (((data.candidates || [])[0] || {}).content || {}).parts.map(p => p.text || '').join(''); } catch(e){}
+    reply = String(reply).replace(/[*_#`>]/g, '').trim();
+    return { ok: res.ok, status: res.status, reply: reply };
+  }
+
+  function askAI(msgs, ctrl){
+    return cfg.engine === 'gemini' ? askGemini(msgs, ctrl) : askPollinations(msgs, ctrl);
+  }
+
+  async function askJarvis(text){
+    if (!text) return;
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    addMsg('user', text);
+    history.push({ role:'user', text });
+    saveChat();
+    setBusy('AJATTELEE');
+    const think = addMsg('jarvis', '● ● ●');
+    think.classList.add('typing');
+    const msgs = [{ role:'system', content: PERSONA }]
+      .concat(history.slice(-12).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })));
+    const ctrl = ('AbortController' in window) ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), 90000) : null;
+    try {
+      const out = await askAI(msgs, ctrl);
+      if (timer) clearTimeout(timer);
+      if (out.needkey){
+        think.remove();
+        addMsg('sys', 'Gemini tarvitsee ilmaisen avaimen — hae osoitteesta aistudio.google.com ja liitä ⚙ asetuksiin');
+        setWrap.classList.add('open');
+        return;
+      }
+      if (!out.ok){
+        let m;
+        if (cfg.engine === 'gemini'){
+          m = out.status === 400 || out.status === 403 ? 'Avain hylätty tai malli väärin — tarkista ⚙ asetuksista'
+            : out.status === 404 ? 'Mallia ei löydy — tarkista mallinimi ⚙'
+            : out.status === 429 ? 'Geminin nopeus-/päiväraja täynnä — kokeile hetken päästä'
+            : out.status >= 500 ? 'Googlen palvelu on ruuhkainen — yritä hetken päästä'
+            : out.status ? 'API-virhe ' + out.status : 'Ei verkkoyhteyttä — chat tarvitsee netin';
+        } else {
+          m = (out.status === 429 || out.status === 402) ? 'Aivot tarvitsevat hetken hengähdystauon — kokeile ~30 s päästä'
+            : out.status >= 500 ? 'AI-palvelu on ruuhkainen — yritä hetken päästä'
+            : out.status ? 'API-virhe ' + out.status : 'Ei verkkoyhteyttä — chat tarvitsee netin';
+        }
+        throw new Error(m);
+      }
+      if (!out.reply) throw new Error('Tyhjä vastaus — kokeile uudelleen');
+      think.textContent = out.reply;
+      think.classList.remove('typing');
+      history.push({ role:'model', text: out.reply });
+      saveChat();
+      speak(out.reply);
+    } catch (err) {
+      if (timer) clearTimeout(timer);
+      think.remove();
+      const msg = (err && err.name === 'AbortError') ? 'Aikakatkaisu — vastaus kesti liian kauan'
+                : (err instanceof TypeError) ? 'Ei verkkoyhteyttä — chat tarvitsee netin' : err.message;
+      addMsg('sys', msg);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function sendText(){
+    const t = chatInput.value.trim();
+    if (!t || busy === 'AJATTELEE') return;
+    chatInput.value = '';
+    askJarvis(t);
+  }
+  sendBtn.addEventListener('click', sendText);
+  chatInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); sendText(); } });
+
+  /* ---------- puhe syntetisoitu vastaus (TTS) ---------- */
+  let voices = [];
+  function loadVoices(){ try { voices = speechSynthesis.getVoices() || []; } catch(e){ voices = []; } }
+  if ('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+  function speak(text){
+    if (!cfg.tts || !('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/[*_#`>]/g, '').slice(0, 600));
+    u.lang = 'fi-FI';
+    const v = voices.find(x => (x.lang || '').toLowerCase().indexOf('fi') === 0);
+    if (v) u.voice = v;
+    u.rate = 1.05; u.pitch = 0.92;
+    u.onstart = () => setBusy('PUHUU');
+    u.onend = u.onerror = () => setBusy(null);
+    speechSynthesis.speak(u);
+  }
+
+  /* ---------- puheentunnistus (STT, fi-FI) ---------- */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, recOn = false;
+  if (SR){
+    rec = new SR();
+    rec.lang = 'fi-FI'; rec.interimResults = true; rec.maxAlternatives = 1;
+    rec.onresult = e => {
+      let interim = '', final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++){
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t; else interim += t;
+      }
+      chatInput.value = final || interim;
+      if (final && cfg.auto){ stopRec(); askJarvis(final.trim()); }
+    };
+    rec.onend = () => { recOn = false; talkBtn.classList.remove('on'); if (busy === 'KUUNTELEE') setBusy(null); };
+    rec.onerror = e => {
+      if (e.error === 'not-allowed'){ addMsg('sys', 'Mikrofoni estetty — salli selaimen asetuksista'); stopRec(); }
+      else if (e.error === 'network'){ addMsg('sys', 'Puheentunnistus tarvitsee netin'); stopRec(); }
+    };
+  }
+  function startRec(){
+    if (!rec){ addMsg('sys', 'Puheohjaus ei toimi tässä selaimessa — kirjoita viesti'); return; }
+    try { rec.start(); recOn = true; talkBtn.classList.add('on'); setBusy('KUUNTELEE'); } catch(e){}
+  }
+  function stopRec(){ try { if (rec) rec.stop(); } catch(e){} }
+  talkBtn.addEventListener('click', () => recOn ? stopRec() : startRec());
+
+  /* ---------- yhteystesti ---------- */
+  $('testconn').addEventListener('click', async () => {
+    testOut.textContent = 'TESTAAN...'; testOut.style.color = '#a97fa8';
+    try {
+      const out = await askAI([{ role:'user', content: 'Sano lyhyesti: yhteys OK' }], null);
+      if (out.needkey){ testOut.textContent = 'ANNA AVAIN ENSIN — aistudio.google.com'; testOut.style.color = '#ff8fa3'; return; }
+      if (out.ok && out.reply){ testOut.textContent = 'YHTEYS OK ✓'; testOut.style.color = '#7ee2a8'; }
+      else if (out.ok){ testOut.textContent = 'YHTEYS OK, vastaus tyhjä'; testOut.style.color = '#7ee2a8'; }
+      else {
+        const busy = (out.status === 429 || out.status === 402);
+        const why = (out.status === 400 || out.status === 403) ? ' — avain tai malli väärin?'
+                  : busy ? (cfg.engine === 'gemini' ? ' — nopeusraja, odota hetki' : ' — ruuhkaa, kokeile ~30 s päästä') : '';
+        testOut.textContent = 'VIRHE ' + out.status + why;
+        testOut.style.color = '#ff8fa3';
+      }
+    } catch(e) {
+      testOut.textContent = 'EI VERKKOA — tarvitaan internet'; testOut.style.color = '#ff8fa3';
+    }
+  });
 
   /* ---------- service worker ---------- */
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
