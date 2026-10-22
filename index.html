@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- J.A.R.V.I.S v8 — GLM-silta (Z.ai) + uudet orb-ikonit | v7 äänenvalinta -->
+<!-- J.A.R.V.I.S v9 — vapaa ketju: GLM → ilmainen glm-4.7-flash → varmoottori | v8 GLM-silta + orb-ikonit -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -415,10 +415,12 @@
     /* malli muistetaan per moottori — ei sekoitu enää eri moottorien välillä */
     modelmap: (function(){
       const saved = LS.get('jarvis_modelmap', null);
-      if (saved && typeof saved === 'object') return saved;
-      const old = LS.get('jarvis_model', '');
-      const isG = /gemini/i.test(old);
-      return { pollinations: isG ? '' : old, gemini: isG ? old : '', glm: '' };
+      const mm = (saved && typeof saved === 'object') ? saved
+        : (function(){ const old = LS.get('jarvis_model', ''); const isG = /gemini/i.test(old);
+           return { pollinations: isG ? '' : old, gemini: isG ? old : '', glm: '' }; })();
+      /* rev 9: ilmainen ensin — ei vaadi saldoa */
+      if (mm.glm === 'glm-5.3-flash' || mm.glm === 'glm-5.3') mm.glm = 'glm-4.7-flash';
+      return mm;
     })()
   };
   history = LS.get('jarvis_chat', []);
@@ -546,10 +548,10 @@
       hint: 'Gemini: selvästi vahvempi ajattelu. Ilmainen avain: aistudio.google.com → Get API key (2 min). Jos malli ei ole enää saatavilla, JARVIS etsii toimivan itse. Avain jää vain tähän laitteeseen.'
     },
     glm: {
-      model: 'glm-5.3-flash',
+      model: 'glm-4.7-flash',
       keylbl: 'AVAIN — vain jos silta ei sitä pidä',
       keyph: 'Tyhjä = silta hoitaa avaimen (suositus)',
-      hint: 'GLM (Z.ai) — sama aivoperhe kuin tämä chat. SILTA-kenttään Worker-osoitteesi (ohje chatissa). Mallit: glm-5.3-flash = nopea & edullinen, glm-5.3 = vahvin, glm-4.7-flash = ilmainen.'
+      hint: 'GLM (Z.ai) — sama aivoperhe kuin tämä chat. Oletus ILMAINEN glm-4.7-flash (ei vaadi saldoa). Jos malli ei vastaa, JARVIS kokeilee uudestaan ja lopuksi varmoottori vastaa — chat ei jää koskaan tyhjiksi. SILTA-kenttään Worker-osoitteesi.'
     }
   };
 
@@ -658,27 +660,62 @@
     const u = (cfg.glmurl || '').trim().replace(/\/+$/, '');
     return u ? u + '/chat/completions' : 'https://api.z.ai/api/paas/v4/chat/completions';
   }
-  async function askGLM(msgs, ctrl){
-    let res = null, data = {};
-    const model = (cfg.modelmap.glm || 'glm-5.3-flash').trim() || 'glm-5.3-flash';
-    for (let attempt = 0; attempt < 3; attempt++){
-      if (attempt) await new Promise(r => setTimeout(r, attempt === 1 ? 4000 : 15000));
+  /* yksi kutsu omalla aikakatkaisulla — ruuhkainen pyyntö ei saa roikkua ikuisesti */
+  async function glmCall(model, msgs, ctrl, tmo){
+    const ac = ('AbortController' in window) ? new AbortController() : null;
+    let timer = null, onAbort = null;
+    if (ac){
+      timer = setTimeout(() => { try { ac.abort(); } catch(e){} }, tmo || 35000);
+      if (ctrl && ctrl.signal){
+        if (ctrl.signal.aborted) { try { ac.abort(); } catch(e){} }
+        else { onAbort = () => { try { ac.abort(); } catch(e){} }; try { ctrl.signal.addEventListener('abort', onAbort); } catch(e){} }
+      }
+    }
+    try {
       const headers = { 'Content-Type': 'application/json' };
       if (cfg.key) headers['Authorization'] = 'Bearer ' + cfg.key;
-      res = await fetch(glmBase(), {
+      const res = await fetch(glmBase(), {
         method: 'POST',
         headers: headers,
-        signal: ctrl ? ctrl.signal : undefined,
+        signal: ac ? ac.signal : (ctrl ? ctrl.signal : undefined),
         body: JSON.stringify({ model: model, messages: msgs, stream: false, temperature: 0.7, max_tokens: 400 })
       });
-      if (res.ok){ data = await res.json().catch(()=>({})); break; }
-      if ([429, 500, 502, 503].indexOf(res.status) === -1) break;
+      const data = await res.json().catch(()=>({}));
+      const errc = data && data.error ? data.error : {};
+      let reply = '';
+      try { reply = ((((data.choices || [])[0] || {}).message || {}).content) || ''; } catch(e){}
+      reply = String(reply).replace(/[*_#`>]/g, '').trim();
+      return { ok: !!res.ok, status: res.status, code: String(errc.code || ''), errmsg: String(errc.message || ''), reply: reply };
+    } catch(e){
+      return { ok: false, status: 0, code: 'TIMEOUT', errmsg: (e && e.name) || '', reply: '' };
+    } finally {
+      if (timer) clearTimeout(timer);
+      if (onAbort && ctrl && ctrl.signal){ try { ctrl.signal.removeEventListener('abort', onAbort); } catch(e){} }
     }
-    const status = res ? res.status : 0;
-    let reply = '';
-    try { reply = ((((data.choices || [])[0] || {}).message || {}).content) || ''; } catch(e){}
-    reply = String(reply).replace(/[*_#`>]/g, '').trim();
-    return { ok: res ? res.ok : false, status: status, reply: reply, model: res && res.ok ? model : '' };
+  }
+  /* REV 9 vapaa ketju: valittu malli → ilmainen glm-4.7-flash → varmoottori (Pollinations).
+     1113 = ei saldoa → vaihda suoraan ilmaiseen; 1305/429 = ruuhka → uusia yrityksiä.
+     Chat ei kuole koskaan: viimeisenä vastaa aina varmoottori. */
+  async function askGLM(msgs, ctrl){
+    const chosen = (cfg.modelmap.glm || 'glm-4.7-flash').trim() || 'glm-4.7-flash';
+    const chain = chosen === 'glm-4.7-flash' ? ['glm-4.7-flash'] : [chosen, 'glm-4.7-flash'];
+    let out = null, sawBalance = false, sawBusy = false;
+    for (let ci = 0; ci < chain.length; ci++){
+      for (let attempt = 0; attempt < 2; attempt++){
+        if (attempt) await new Promise(r => setTimeout(r, 5000));
+        out = await glmCall(chain[ci], msgs, ctrl, 30000);
+        if (out.ok){ out.model = chain[ci]; return out; }
+        if (out.code === '1113'){ sawBalance = true; break; }
+        if (out.status === 0 || out.status === 429 || out.status >= 500 || out.code === '1305'){ sawBusy = true; continue; }
+        break; /* 401/403/404 tms. — mallin vaihto ei auta */
+      }
+      if (out && (out.status === 401 || out.status === 403 || out.status === 404)) break;
+    }
+    const p = await askPollinations(msgs, ctrl);
+    p.fallback = !!p.ok;
+    p.glmstatus = out ? out.status : 0;
+    p.sawBalance = sawBalance; p.sawBusy = sawBusy;
+    return p;
   }
 
   function askAI(msgs, ctrl){
@@ -699,7 +736,7 @@
     const msgs = [{ role:'system', content: PERSONA }]
       .concat(history.slice(-12).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })));
     const ctrl = ('AbortController' in window) ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(() => ctrl.abort(), 90000) : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), 150000) : null;
     try {
       const out = await askAI(msgs, ctrl);
       if (timer) clearTimeout(timer);
@@ -718,11 +755,11 @@
             : out.status >= 500 ? 'Googlen palvelu on ruuhkainen — yritä hetken päästä'
             : out.status ? 'API-virhe ' + out.status : 'Ei verkkoyhteyttä — chat tarvitsee netin';
         } else if (cfg.engine === 'glm'){
-          m = out.status === 401 || out.status === 403 ? 'Silta ei päästä läpi — lisää avain ⚙ tai tarkista Workerin ZAI_KEY'
-            : out.status === 404 ? 'Mallia ei löydy — kokeile glm-4.7-flash tai glm-5.3 ⚙'
-            : out.status === 429 ? 'GLM:n nopeus-/kiintiöraja täynnä — kokeile hetken päästä'
-            : out.status >= 500 ? 'Silta tai Z.ai ruuhkainen — yritä hetken päästä'
-            : out.status ? 'API-virhe ' + out.status : 'Siltaan ei yhteyttä — tarkista SILTA-osoite ⚙';
+          const gs = out.glmstatus || out.status;
+          m = gs === 401 || gs === 403 ? 'Silta ei päästä läpi — tarkista Workerin ZAI_KEY (Settings → Variables)'
+            : gs === 404 ? 'Mallia ei löydy — kokeile glm-4.7-flash ⚙'
+            : out.sawBalance ? 'GLM-tilillä ei saldoa ja ilmainen malli oli ruuhkainen — kokeile hetken päästä (varmoottori vastaa sillä välin)'
+            : 'GLM on ruuhkainen ja varmoottorikin kompastui — kokeile ~30 s päästä';
         } else {
           m = (out.status === 429 || out.status === 402) ? 'Aivot tarvitsevat hetken hengähdystauon — kokeile ~30 s päästä'
             : out.status >= 500 ? 'AI-palvelu on ruuhkainen — yritä hetken päästä'
@@ -735,6 +772,7 @@
       think.classList.remove('typing');
       history.push({ role:'model', text: out.reply });
       saveChat();
+      if (out.fallback) addMsg('sys', '⚡ GLM ei vastannut (' + (out.sawBalance ? 'ei saldoa' : out.sawBusy ? 'ruuhka' : 'virhe ' + (out.glmstatus || '?')) + ') — varmoottori hoiti vastauksen');
       speak(out.reply);
     } catch (err) {
       if (timer) clearTimeout(timer);
@@ -809,14 +847,31 @@
     try {
       const out = await askAI([{ role:'user', content: 'Sano lyhyesti: yhteys OK' }], null);
       if (out.needkey){ testOut.textContent = 'ANNA AVAIN ENSIN — aistudio.google.com'; testOut.style.color = '#ff8fa3'; return; }
-      if (out.ok && out.reply){ testOut.textContent = 'YHTEYS OK ✓' + (out.model ? ' (' + out.model + ')' : ''); testOut.style.color = '#7ee2a8'; }
+      if (out.ok && out.reply){
+        if (cfg.engine === 'glm' && out.fallback){
+          testOut.textContent = 'GLM ei vastannut (' + (out.sawBalance ? 'ei saldoa' : out.sawBusy ? 'ruuhka' : 'virhe ' + (out.glmstatus || '?')) + ') — varmoottori vastasi ✓';
+          testOut.style.color = '#ffb36b';
+        } else {
+          testOut.textContent = 'YHTEYS OK ✓' + (out.model ? ' (' + out.model + ')' : ''); testOut.style.color = '#7ee2a8';
+        }
+      }
       else if (out.ok){ testOut.textContent = 'YHTEYS OK, vastaus tyhjä'; testOut.style.color = '#7ee2a8'; }
+      else if (cfg.engine === 'glm' && out.fallback === false && out.glmstatus){
+        const gs = out.glmstatus;
+        const why = gs === 401 || gs === 403 ? ' — silta ei tunnista avainta (ZAI_KEY?)'
+                  : gs === 404 ? ' — mallia ei löydy, kokeile glm-4.7-flash'
+                  : out.sawBalance ? ' — GLM-tilillä ei saldoa; varmoottori hoitaa chatin sillä välin'
+                  : (out.sawBusy || gs === 429 || gs >= 500) ? ' — GLM ruuhkainen; varmoottori hoitaa chatin sillä välin'
+                  : '';
+        testOut.textContent = 'GLM EI VASTANNUT (' + gs + ')' + why + ' — varmoottori ' + (out.ok ? 'OK ✓' : 'eikäy');
+        testOut.style.color = '#ffb36b';
+      }
       else {
         const busy = (out.status === 429 || out.status === 402);
-        const why = (out.status === 400 || out.status === 403) ? (cfg.engine === 'glm' ? ' — silta/avain hylkäsi pyynnön' : ' — avain väärin?')
-                  : out.status === 401 ? (cfg.engine === 'glm' ? ' — silta ei tunnista avainta' : ' — avain väärin?')
-                  : out.status === 404 ? (cfg.engine === 'glm' ? ' — mallia ei löydy, kokeile glm-4.7-flash' : ' — mallia ei löytynyt tällä avaimella')
-                  : busy ? (cfg.engine === 'gemini' ? ' — nopeusraja, odota hetki' : cfg.engine === 'glm' ? ' — GLM nopeusraja, odota hetki' : ' — ruuhkaa, kokeile ~30 s päästä') : '';
+        const why = (out.status === 400 || out.status === 403) ? ' — avain väärin?'
+                  : out.status === 401 ? ' — avain väärin?'
+                  : out.status === 404 ? ' — mallia ei löytynyt'
+                  : busy ? ' — ruuhkaa, kokeile ~30 s päästä' : '';
         testOut.textContent = 'VIRHE ' + out.status + why;
         testOut.style.color = '#ff8fa3';
       }
