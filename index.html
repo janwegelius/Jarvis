@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- J.A.R.V.I.S v6 — teemat (tumma/tuli/jää) + Gemini-mallin automaattinen etsintä -->
+<!-- J.A.R.V.I.S v8 — GLM-silta (Z.ai) + uudet orb-ikonit | v7 äänenvalinta -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -134,6 +134,10 @@
   .setrow { display:flex; gap:10px; justify-content:center; margin-top:6px; }
   #testout { text-align:center; color:#a97fa8; font-size:11px; letter-spacing:.1em; min-height:14px; }
   .hint { color:#7a6f96; font-size:10px; letter-spacing:.05em; text-align:center; line-height:1.5; }
+  .sldrow { display:flex; align-items:center; gap:8px; margin:2px 0; }
+  .sldlbl { color:#a97fa8; font-size:10px; letter-spacing:.1em; min-width:58px; }
+  .sld { flex:1; accent-color:#c77dff; height:20px; background:transparent; }
+  .sldval { color:#e8dcc8; font-size:11px; min-width:34px; text-align:right; }
 </style>
 </head>
 <body>
@@ -234,7 +238,10 @@
     <div class="lbl">AIVOT — VALITSE MOOTTORI</div>
     <label class="chk"><input type="radio" name="engine" id="engpoll" value="pollinations"> Pollinations — ilmainen &amp; rajaton, ei avainta</label>
     <label class="chk"><input type="radio" name="engine" id="enggem" value="gemini"> Google Gemini — vahvempi ajattelu 🔥</label>
-    <div class="lbl">AVAIN (vain Gemini)</div>
+    <label class="chk"><input type="radio" name="engine" id="engglm" value="glm"> GLM (Z.ai) — tämä on minun aivoni 🤖</label>
+    <div class="lbl" id="urllbl" style="display:none">SILTA — WORKER-OSOITE (vain GLM)</div>
+    <input class="inp" id="glmurl" type="text" style="display:none" placeholder="https://oma-silta.workers.dev/api" autocomplete="off">
+    <div class="lbl" id="keylbl">AVAIN (vain Gemini)</div>
     <input class="inp" id="apikey" type="password" placeholder="Ei tarvita Pollinationsilla" autocomplete="off">
     <div class="lbl">MALLI (voi jättää tyhjäksi)</div>
     <input class="inp" id="model" type="text" placeholder="openai-fast" autocomplete="off">
@@ -244,6 +251,11 @@
     <label class="chk"><input type="radio" name="theme" id="thice" value="ice"> Jää ❄ — jäätausta</label>
     <label class="chk"><input type="checkbox" id="ttschk"> JARVIS puhuu vastaukset</label>
     <label class="chk"><input type="checkbox" id="autochk"> Lähetä puhe automaattisesti</label>
+    <div class="lbl">ÄÄNI</div>
+    <select class="inp" id="voicesel" autocomplete="off"></select>
+    <div class="sldrow"><span class="sldlbl">NOPEUS</span><input type="range" class="sld" id="rateslider" min="0.5" max="1.6" step="0.05"><span class="sldval" id="rateval"></span></div>
+    <div class="sldrow"><span class="sldlbl">SÄVEL</span><input type="range" class="sld" id="pitchslider" min="0.4" max="1.6" step="0.05"><span class="sldval" id="pitchval"></span></div>
+    <button class="btn" id="voiceprev">🔊 KOKEILE ÄÄNTÄ</button>
     <div class="setrow">
       <button class="btn" id="testconn">🔌 TESTAA</button>
       <button class="btn" id="saveset">💾 TALLENNA</button>
@@ -374,10 +386,13 @@
   const chatWrap = $('chatwrap'), chatLog = $('chatlog'), chatInput = $('chatinput');
   const sendBtn = $('sendbtn'), talkBtn = $('talkbtn');
   const setWrap = $('setwrap');
-  const keyIn = $('apikey'), modelIn = $('model');
-  const engPoll = $('engpoll'), engGem = $('enggem'), engHint = $('enghint');
+  const keyIn = $('apikey'), modelIn = $('model'), urlIn = $('glmurl');
+  const keyLbl = $('keylbl'), urlLbl = $('urllbl');
+  const engPoll = $('engpoll'), engGem = $('enggem'), engGlm = $('engglm'), engHint = $('enghint');
   const thDark = $('thdark'), thFire = $('thfire'), thIce = $('thice'), themeBg = $('themebg');
   const ttsChk = $('ttschk'), autoChk = $('autochk'), testOut = $('testout');
+  const voiceSel = $('voicesel'), rateSlider = $('rateslider'), rateVal = $('rateval');
+  const pitchSlider = $('pitchslider'), pitchVal = $('pitchval');
 
   let busy = null;              /* null | KUUNTELEE | AJATTELEE | PUHUU */
   let history = [];             /* {role: 'user'|'model', text} */
@@ -391,12 +406,29 @@
     key:    LS.get('jarvis_key', ''),
     model:  LS.get('jarvis_model', ''),
     theme:  LS.get('jarvis_theme', 'dark'),
+    voice:  LS.get('jarvis_voice', ''),
+    rate:   LS.get('jarvis_rate', 1.05),
+    pitch:  LS.get('jarvis_pitch', 0.92),
     tts:    LS.get('jarvis_tts', true),
-    auto:   LS.get('jarvis_auto', true)
+    auto:   LS.get('jarvis_auto', true),
+    glmurl: LS.get('jarvis_glmurl', ''),
+    /* malli muistetaan per moottori — ei sekoitu enää eri moottorien välillä */
+    modelmap: (function(){
+      const saved = LS.get('jarvis_modelmap', null);
+      if (saved && typeof saved === 'object') return saved;
+      const old = LS.get('jarvis_model', '');
+      const isG = /gemini/i.test(old);
+      return { pollinations: isG ? '' : old, gemini: isG ? old : '', glm: '' };
+    })()
   };
   history = LS.get('jarvis_chat', []);
 
-  function saveCfg(){ LS.set('jarvis_engine',cfg.engine); LS.set('jarvis_key',cfg.key); LS.set('jarvis_model',cfg.model); LS.set('jarvis_theme',cfg.theme); LS.set('jarvis_tts',cfg.tts); LS.set('jarvis_auto',cfg.auto); }
+  function saveCfg(){
+    LS.set('jarvis_engine',cfg.engine); LS.set('jarvis_key',cfg.key); LS.set('jarvis_theme',cfg.theme);
+    LS.set('jarvis_voice',cfg.voice); LS.set('jarvis_rate',cfg.rate); LS.set('jarvis_pitch',cfg.pitch);
+    LS.set('jarvis_tts',cfg.tts); LS.set('jarvis_auto',cfg.auto);
+    LS.set('jarvis_glmurl',cfg.glmurl); LS.set('jarvis_modelmap',cfg.modelmap);
+  }
   function saveChat(){ LS.set('jarvis_chat', history.slice(-40)); }
 
   function setBusy(s){
@@ -425,10 +457,11 @@
   $('chatbg').addEventListener('click', () => chatWrap.classList.remove('open'));
 
   $('setbtn').addEventListener('click', () => {
-    engPoll.checked = cfg.engine !== 'gemini'; engGem.checked = cfg.engine === 'gemini';
-    keyIn.value = cfg.key; modelIn.value = cfg.model;
+    engPoll.checked = cfg.engine === 'pollinations'; engGem.checked = cfg.engine === 'gemini'; engGlm.checked = cfg.engine === 'glm';
+    keyIn.value = cfg.key; urlIn.value = cfg.glmurl;
     thDark.checked = cfg.theme !== 'fire' && cfg.theme !== 'ice'; thFire.checked = cfg.theme === 'fire'; thIce.checked = cfg.theme === 'ice';
     ttsChk.checked = cfg.tts; autoChk.checked = cfg.auto;
+    populateVoices(); syncVoiceUI();
     testOut.textContent = ''; testOut.style.color = '#a97fa8';
     syncEngineUI();
     setWrap.classList.add('open');
@@ -436,9 +469,10 @@
   $('setclose').addEventListener('click', () => setWrap.classList.remove('open'));
   $('setbg').addEventListener('click', () => setWrap.classList.remove('open'));
   function saveSet(){
-    cfg.engine = engGem.checked ? 'gemini' : 'pollinations';
+    cfg.engine = engGlm.checked ? 'glm' : engGem.checked ? 'gemini' : 'pollinations';
     cfg.key = keyIn.value.trim();
-    cfg.model = modelIn.value.trim();
+    cfg.modelmap[cfg.engine] = modelIn.value.trim();
+    cfg.glmurl = urlIn.value.trim();
     cfg.tts = ttsChk.checked; cfg.auto = autoChk.checked;
     saveCfg();
     testOut.textContent = 'TALLENNETTU ✓'; testOut.style.color = '#7ee2a8';
@@ -463,6 +497,38 @@
   thIce.addEventListener('change', syncThemeUI);
   applyTheme(cfg.theme);
 
+  /* ---------- ääni: valinta, nopeus, sävel ---------- */
+  function populateVoices(){
+    const prev = cfg.voice;
+    voiceSel.innerHTML = '';
+    const auto = document.createElement('option');
+    auto.value = ''; auto.textContent = 'Automaattinen (suomi)';
+    voiceSel.appendChild(auto);
+    const sorted = voices.slice().sort((a,b) => {
+      const af = (a.lang||'').toLowerCase().indexOf('fi') === 0 ? 0 : 1;
+      const bf = (b.lang||'').toLowerCase().indexOf('fi') === 0 ? 0 : 1;
+      return af - bf || String(a.name).localeCompare(String(b.name));
+    });
+    for (const v of sorted){
+      const o = document.createElement('option');
+      o.value = v.voiceURI || v.name || '';
+      o.textContent = (v.name || 'Ääni') + ' (' + (v.lang || '?') + ')';
+      voiceSel.appendChild(o);
+    }
+    voiceSel.value = prev && Array.from(voiceSel.options).some(o => o.value === prev) ? prev : '';
+    cfg.voice = voiceSel.value;
+  }
+  function syncVoiceUI(){
+    rateSlider.value = cfg.rate; rateVal.textContent = Number(cfg.rate).toFixed(2);
+    pitchSlider.value = cfg.pitch; pitchVal.textContent = Number(cfg.pitch).toFixed(2);
+  }
+  voiceSel.addEventListener('change', () => { cfg.voice = voiceSel.value; saveCfg(); });
+  rateSlider.addEventListener('input', () => { cfg.rate = parseFloat(rateSlider.value); rateVal.textContent = cfg.rate.toFixed(2); });
+  rateSlider.addEventListener('change', saveCfg);
+  pitchSlider.addEventListener('input', () => { cfg.pitch = parseFloat(pitchSlider.value); pitchVal.textContent = cfg.pitch.toFixed(2); });
+  pitchSlider.addEventListener('change', saveCfg);
+  $('voiceprev').addEventListener('click', () => speak('Terve Wege. Tämä on JARVISin ääni juuri näillä asetuksilla.', true));
+
   /* ---------- TEKOÄLY: moottorit — Pollinations (ilmainen) & Gemini (tehokas) ---------- */
   const AI_URL = 'https://text.pollinations.ai/openai';
   const PERSONA = 'Olet J.A.R.V.I.S, Wegelle henkilökohtainen tekoälyavustaja. Vastaa aina suomeksi. Ole tiivis: 1-4 lausetta ellei erikseen pyydetä pidempää vastausta. Olet tyylikäs, ystävällinen ja hienovaraisen ironinen — kuten Iron Man -elokuvien Jarvis. Osoita käyttäjäästä nimellä Wege silloin tällöin. Vastauksesi on puhuttua tekstiä: ei markdownia, ei listoja, ei hymiöitä, ei tähtimerkkejä. Älä väitä tietäväsi asioita, joita et tiedä.';
@@ -475,20 +541,33 @@
     },
     gemini: {
       model: 'gemini-3.5-flash',
+      keylbl: 'AVAIN (vain Gemini)',
       keyph: 'AIza... — ilmainen avain: aistudio.google.com',
       hint: 'Gemini: selvästi vahvempi ajattelu. Ilmainen avain: aistudio.google.com → Get API key (2 min). Jos malli ei ole enää saatavilla, JARVIS etsii toimivan itse. Avain jää vain tähän laitteeseen.'
+    },
+    glm: {
+      model: 'glm-5.3-flash',
+      keylbl: 'AVAIN — vain jos silta ei sitä pidä',
+      keyph: 'Tyhjä = silta hoitaa avaimen (suositus)',
+      hint: 'GLM (Z.ai) — sama aivoperhe kuin tämä chat. SILTA-kenttään Worker-osoitteesi (ohje chatissa). Mallit: glm-5.3-flash = nopea & edullinen, glm-5.3 = vahvin, glm-4.7-flash = ilmainen.'
     }
   };
 
   function syncEngineUI(){
-    const eng = engGem.checked ? 'gemini' : 'pollinations';
+    const eng = engGlm.checked ? 'glm' : engGem.checked ? 'gemini' : 'pollinations';
     const d = ENGINE_DEFAULTS[eng];
+    keyLbl.textContent = d.keylbl;
     keyIn.placeholder = d.keyph;
     modelIn.placeholder = d.model;
+    modelIn.value = cfg.modelmap[eng] || '';
     engHint.textContent = d.hint;
+    const g = eng === 'glm';
+    urlLbl.style.display = g ? 'block' : 'none';
+    urlIn.style.display = g ? 'block' : 'none';
   }
   engPoll.addEventListener('change', syncEngineUI);
   engGem.addEventListener('change', syncEngineUI);
+  engGlm.addEventListener('change', syncEngineUI);
 
   function askOnce(msgs, signal){
     return fetch(AI_URL, {
@@ -573,8 +652,39 @@
     return { ok: res ? res.ok : false, status: status, reply: reply, model: used };
   }
 
+  /* GLM-silta: OpenAI-muotoinen POST → oma Cloudflare Worker (suositus)
+     tai suoraan api.z.ai. Silta pitää Z.ai-avaimen turvassa palvelimella. */
+  function glmBase(){
+    const u = (cfg.glmurl || '').trim().replace(/\/+$/, '');
+    return u ? u + '/chat/completions' : 'https://api.z.ai/api/paas/v4/chat/completions';
+  }
+  async function askGLM(msgs, ctrl){
+    let res = null, data = {};
+    const model = (cfg.modelmap.glm || 'glm-5.3-flash').trim() || 'glm-5.3-flash';
+    for (let attempt = 0; attempt < 3; attempt++){
+      if (attempt) await new Promise(r => setTimeout(r, attempt === 1 ? 4000 : 15000));
+      const headers = { 'Content-Type': 'application/json' };
+      if (cfg.key) headers['Authorization'] = 'Bearer ' + cfg.key;
+      res = await fetch(glmBase(), {
+        method: 'POST',
+        headers: headers,
+        signal: ctrl ? ctrl.signal : undefined,
+        body: JSON.stringify({ model: model, messages: msgs, stream: false, temperature: 0.7, max_tokens: 400 })
+      });
+      if (res.ok){ data = await res.json().catch(()=>({})); break; }
+      if ([429, 500, 502, 503].indexOf(res.status) === -1) break;
+    }
+    const status = res ? res.status : 0;
+    let reply = '';
+    try { reply = ((((data.choices || [])[0] || {}).message || {}).content) || ''; } catch(e){}
+    reply = String(reply).replace(/[*_#`>]/g, '').trim();
+    return { ok: res ? res.ok : false, status: status, reply: reply, model: res && res.ok ? model : '' };
+  }
+
   function askAI(msgs, ctrl){
-    return cfg.engine === 'gemini' ? askGemini(msgs, ctrl) : askPollinations(msgs, ctrl);
+    return cfg.engine === 'gemini' ? askGemini(msgs, ctrl)
+         : cfg.engine === 'glm' ? askGLM(msgs, ctrl)
+         : askPollinations(msgs, ctrl);
   }
 
   async function askJarvis(text){
@@ -607,6 +717,12 @@
             : out.status === 429 ? 'Geminin nopeus-/päiväraja täynnä — kokeile hetken päästä'
             : out.status >= 500 ? 'Googlen palvelu on ruuhkainen — yritä hetken päästä'
             : out.status ? 'API-virhe ' + out.status : 'Ei verkkoyhteyttä — chat tarvitsee netin';
+        } else if (cfg.engine === 'glm'){
+          m = out.status === 401 || out.status === 403 ? 'Silta ei päästä läpi — lisää avain ⚙ tai tarkista Workerin ZAI_KEY'
+            : out.status === 404 ? 'Mallia ei löydy — kokeile glm-4.7-flash tai glm-5.3 ⚙'
+            : out.status === 429 ? 'GLM:n nopeus-/kiintiöraja täynnä — kokeile hetken päästä'
+            : out.status >= 500 ? 'Silta tai Z.ai ruuhkainen — yritä hetken päästä'
+            : out.status ? 'API-virhe ' + out.status : 'Siltaan ei yhteyttä — tarkista SILTA-osoite ⚙';
         } else {
           m = (out.status === 429 || out.status === 402) ? 'Aivot tarvitsevat hetken hengähdystauon — kokeile ~30 s päästä'
             : out.status >= 500 ? 'AI-palvelu on ruuhkainen — yritä hetken päästä'
@@ -624,7 +740,7 @@
       if (timer) clearTimeout(timer);
       think.remove();
       const msg = (err && err.name === 'AbortError') ? 'Aikakatkaisu — vastaus kesti liian kauan'
-                : (err instanceof TypeError) ? 'Ei verkkoyhteyttä — chat tarvitsee netin' : err.message;
+                : (err instanceof TypeError) ? (cfg.engine === 'glm' ? 'Siltaan ei saada yhteyttä — tarkista SILTA-osoite ⚙ tai netti' : 'Ei verkkoyhteyttä — chat tarvitsee netin') : err.message;
       addMsg('sys', msg);
     } finally {
       setBusy(null);
@@ -644,14 +760,16 @@
   let voices = [];
   function loadVoices(){ try { voices = speechSynthesis.getVoices() || []; } catch(e){ voices = []; } }
   if ('speechSynthesis' in window){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
-  function speak(text){
-    if (!cfg.tts || !('speechSynthesis' in window)) return;
+  function speak(text, force){
+    if (!force && (!cfg.tts || !('speechSynthesis' in window))) return;
+    if (!('speechSynthesis' in window)) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/[*_#`>]/g, '').slice(0, 600));
     u.lang = 'fi-FI';
-    const v = voices.find(x => (x.lang || '').toLowerCase().indexOf('fi') === 0);
+    const chosen = voices.find(x => (x.voiceURI || x.name) === cfg.voice);
+    const v = chosen || voices.find(x => (x.lang || '').toLowerCase().indexOf('fi') === 0);
     if (v) u.voice = v;
-    u.rate = 1.05; u.pitch = 0.92;
+    u.rate = cfg.rate; u.pitch = cfg.pitch;
     u.onstart = () => setBusy('PUHUU');
     u.onend = u.onerror = () => setBusy(null);
     speechSynthesis.speak(u);
@@ -695,9 +813,10 @@
       else if (out.ok){ testOut.textContent = 'YHTEYS OK, vastaus tyhjä'; testOut.style.color = '#7ee2a8'; }
       else {
         const busy = (out.status === 429 || out.status === 402);
-        const why = (out.status === 400 || out.status === 403) ? ' — avain väärin?'
-                  : out.status === 404 ? ' — mallia ei löytynyt tällä avaimella'
-                  : busy ? (cfg.engine === 'gemini' ? ' — nopeusraja, odota hetki' : ' — ruuhkaa, kokeile ~30 s päästä') : '';
+        const why = (out.status === 400 || out.status === 403) ? (cfg.engine === 'glm' ? ' — silta/avain hylkäsi pyynnön' : ' — avain väärin?')
+                  : out.status === 401 ? (cfg.engine === 'glm' ? ' — silta ei tunnista avainta' : ' — avain väärin?')
+                  : out.status === 404 ? (cfg.engine === 'glm' ? ' — mallia ei löydy, kokeile glm-4.7-flash' : ' — mallia ei löytynyt tällä avaimella')
+                  : busy ? (cfg.engine === 'gemini' ? ' — nopeusraja, odota hetki' : cfg.engine === 'glm' ? ' — GLM nopeusraja, odota hetki' : ' — ruuhkaa, kokeile ~30 s päästä') : '';
         testOut.textContent = 'VIRHE ' + out.status + why;
         testOut.style.color = '#ff8fa3';
       }
