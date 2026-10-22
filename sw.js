@@ -1,6 +1,6 @@
 /* J.A.R.V.I.S service worker - cache shell for offline orb */
-const CACHE = 'jarvis-v5';
-const SHELL = ['./', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'jarvis-v6';
+const SHELL = ['./', './manifest.json', './icon-192.png', './icon-512.png', './bg-fire.jpg', './bg-ice.jpg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

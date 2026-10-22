@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0d0524">
+<meta name="theme-color" id="metatheme" content="#0d0524">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -20,16 +20,51 @@
     font-family:'Segoe UI', Consolas, monospace; touch-action:none; user-select:none;
     background:radial-gradient(ellipse at 50% 42%, #170a30 0%, #0d0524 45%, #070414 100%);
   }
-  #stars { position:fixed; inset:0; z-index:0; }
-  .cloud { position:fixed; z-index:0; border-radius:50%; filter:blur(70px); opacity:.5; }
+
+  /* ================= TEEMAT: TULI / JÄÄ ================= */
+  body.fire {
+    --c-title:#ffd9b3; --c-title-g1:rgba(255,157,69,.85); --c-title-g2:rgba(255,94,120,.4);
+    --c-status:#a97fa8; --c-state:#ffb36b;
+    --c-btn-bg:rgba(27,16,48,.8); --c-btn-bd:rgba(138,77,191,.6); --c-btn-tx:#ffd9b3;
+    --cloud1:rgba(199,125,255,.55); --cloud2:rgba(255,94,120,.45); --cloud3:rgba(255,157,69,.35);
+    --halo1:rgba(255,157,69,.30); --halo2:rgba(255,94,120,.16); --halo3:rgba(199,125,255,.10);
+    --core-hi:#fff7ea; --core-a:#ffd166; --core-b:#ff8c2f; --core-c:#c92a12;
+    --inner-a:rgba(255,190,120,.92); --inner-b:rgba(255,120,60,0);
+    --arc-a:#ff9d45; --arc-b:#ff5e78; --arc-c:#ffb36b; --arc-d:#c77dff; --arc-e:#8a4dbf;
+    --dot-a:#ffe0b3; --dot-b:#ffb3d9; --dot-c:#fff3dd; --dot-d:#ffd6ec; --dot-e:#ff9d45;
+    --wave:#ffb36b; --tick:#7a4f9e; --rim:#ffe8c7; --dash:#7a4f9e;
+    --panel-bd:rgba(138,77,191,.5); --user-bd:rgba(255,157,69,.45);
+    --bgart:url('./bg-fire.jpg'); --meta:#0d0524;
+  }
+  body.ice {
+    --c-title:#d6e9ff; --c-title-g1:rgba(120,180,255,.9); --c-title-g2:rgba(140,120,255,.45);
+    --c-status:#7f9ac8; --c-state:#8fc7ff;
+    --c-btn-bg:rgba(12,20,48,.82); --c-btn-bd:rgba(110,150,235,.6); --c-btn-tx:#d6e9ff;
+    --cloud1:rgba(120,160,255,.50); --cloud2:rgba(80,220,255,.35); --cloud3:rgba(150,100,255,.42);
+    --halo1:rgba(120,180,255,.30); --halo2:rgba(90,120,255,.18); --halo3:rgba(180,140,255,.10);
+    --core-hi:#f4faff; --core-a:#a8d8ff; --core-b:#5b8cff; --core-c:#3b1bd8;
+    --inner-a:rgba(160,200,255,.92); --inner-b:rgba(120,140,255,0);
+    --arc-a:#7fc4ff; --arc-b:#8a7dff; --arc-c:#9fd8ff; --arc-d:#c77dff; --arc-e:#6a5ae0;
+    --dot-a:#eaf6ff; --dot-b:#d0c4ff; --dot-c:#ffffff; --dot-d:#dcd4ff; --dot-e:#7fc4ff;
+    --wave:#9fd8ff; --tick:#5a6fd8; --rim:#dbeaff; --dash:#5a6fd8;
+    --panel-bd:rgba(110,150,235,.5); --user-bd:rgba(127,196,255,.45);
+    --bgart:url('./bg-ice.jpg'); --meta:#050a24;
+  }
+  .bgart { position:fixed; inset:0; z-index:0; background-image:var(--bgart);
+           background-size:cover; background-position:center; opacity:.45; }
+  .bgart::after { content:''; position:absolute; inset:0;
+           background:radial-gradient(ellipse at 50% 42%, rgba(7,4,20,.30) 0%, rgba(7,4,20,.80) 100%); }
+
+  #stars { position:fixed; inset:0; z-index:1; }
+  .cloud { position:fixed; z-index:1; border-radius:50%; filter:blur(70px); opacity:.5; }
   .c1 { width:60vmin;height:44vmin;left:-12vmin;top:8vmin;
-        background:radial-gradient(circle, rgba(199,125,255,.55), transparent 70%);
+        background:radial-gradient(circle, var(--cloud1), transparent 70%);
         animation:drift1 26s ease-in-out infinite alternate; }
   .c2 { width:56vmin;height:40vmin;right:-14vmin;bottom:6vmin;
-        background:radial-gradient(circle, rgba(255,94,120,.45), transparent 70%);
+        background:radial-gradient(circle, var(--cloud2), transparent 70%);
         animation:drift2 31s ease-in-out infinite alternate; }
   .c3 { width:46vmin;height:34vmin;right:6vmin;top:-8vmin;
-        background:radial-gradient(circle, rgba(255,157,69,.35), transparent 70%);
+        background:radial-gradient(circle, var(--cloud3), transparent 70%);
         animation:drift1 38s ease-in-out infinite alternate-reverse; }
   @keyframes drift1 { from{transform:translate(0,0) scale(1)} to{transform:translate(6vmin,4vmin) scale(1.15)} }
   @keyframes drift2 { from{transform:translate(0,0) scale(1.1)} to{transform:translate(-5vmin,-4vmin) scale(.95)} }
@@ -37,7 +72,7 @@
   .stage { position:relative; z-index:2; width:min(78vmin,470px); height:min(78vmin,470px); }
   .halo {
     position:absolute; inset:10%; border-radius:50%;
-    background:radial-gradient(circle, rgba(255,157,69,.30) 0%, rgba(255,94,120,.16) 42%, rgba(199,125,255,.10) 58%, transparent 72%);
+    background:radial-gradient(circle, var(--halo1) 0%, var(--halo2) 42%, var(--halo3) 58%, transparent 72%);
     animation:breathe 3.2s ease-in-out infinite; filter:blur(8px);
   }
   @keyframes breathe { 0%,100%{transform:scale(.94);opacity:.75} 50%{transform:scale(1.05);opacity:1} }
@@ -50,22 +85,33 @@
   @keyframes spinrev { to{transform:rotate(-360deg)} }
   .core { animation:corepulse 3.2s ease-in-out infinite; transform-origin:250px 250px; }
   @keyframes corepulse { 0%,100%{opacity:.85} 50%{opacity:1} }
-  .wave { opacity:0; transform-origin:250px 250px; }
+  .wave { opacity:0; transform-origin:250px 250px; stroke:var(--wave); }
   .burst .wave { animation:waveout .7s ease-out forwards; }
   @keyframes waveout { 0%{opacity:.95;transform:scale(.25)} 100%{opacity:0;transform:scale(1.25)} }
   .burst .halo { animation:none; transform:scale(1.12); opacity:1; transition:.15s; }
   .burst .core { animation:none; opacity:1; }
 
+  /* SVG-teemavärit (CSS päittää attribuutit) */
+  #gcore .s1 { stop-color:var(--core-hi); } #gcore .s2 { stop-color:var(--core-a); }
+  #gcore .s3 { stop-color:var(--core-b); } #gcore .s4 { stop-color:var(--core-c); }
+  #ginner .s1 { stop-color:var(--inner-a); } #ginner .s2 { stop-color:var(--inner-b); }
+  .ticks { stroke:var(--tick); }
+  .arc-a { stroke:var(--arc-a); } .arc-b { stroke:var(--arc-b); }
+  .arc-c { stroke:var(--arc-c); } .arc-d { stroke:var(--arc-d); } .arc-e { stroke:var(--arc-e); }
+  .dot-a { fill:var(--dot-a); } .dot-b { fill:var(--dot-b); }
+  .dot-c { fill:var(--dot-c); } .dot-d { fill:var(--dot-d); } .dot-e { fill:var(--dot-e); }
+  .rim { stroke:var(--rim); } .dashring { stroke:var(--dash); }
+
   .title {
-    margin-top:1vmin; z-index:2; color:#ffd9b3; letter-spacing:.55em; font-weight:300;
+    margin-top:1vmin; z-index:2; color:var(--c-title); letter-spacing:.55em; font-weight:300;
     font-size:clamp(15px,3.4vmin,26px); text-indent:.55em; text-align:center;
-    text-shadow:0 0 14px rgba(255,157,69,.85), 0 0 40px rgba(255,94,120,.4);
+    text-shadow:0 0 14px var(--c-title-g1), 0 0 40px var(--c-title-g2);
   }
   .status {
-    margin-top:1.6vmin; z-index:2; color:#a97fa8; font-size:clamp(9px,1.9vmin,14px);
+    margin-top:1.6vmin; z-index:2; color:var(--c-status); font-size:clamp(9px,1.9vmin,14px);
     letter-spacing:.35em; text-indent:.35em; text-align:center;
   }
-  .status b { color:#ffb36b; font-weight:600; }
+  .status b { color:var(--c-state); font-weight:600; }
   .flicker { animation:flick 4s steps(1) infinite; }
   @keyframes flick { 0%,93%,95%,100%{opacity:1} 94%{opacity:.35} }
 
@@ -73,7 +119,7 @@
   .btn {
     min-height:44px; border-radius:999px; padding:10px 24px; cursor:pointer;
     font-family:inherit; font-size:13px; letter-spacing:.18em; text-indent:.18em;
-    color:#ffd9b3; background:rgba(27,16,48,.8); border:1px solid rgba(138,77,191,.6);
+    color:var(--c-btn-tx); background:var(--c-btn-bg); border:1px solid var(--c-btn-bd);
     transition:transform .08s;
   }
   .btn:active { transform:scale(.95); }
@@ -83,56 +129,53 @@
   .btn.install.show { display:inline-block; }
   #micerr { color:#ff5e78; font-size:11px; letter-spacing:.1em; margin-top:12px; z-index:2;
             text-align:center; display:none; }
+  .gear { position:fixed; top:calc(10px + env(safe-area-inset-top)); right:14px; z-index:5;
+          width:40px; height:40px; border-radius:50%; cursor:pointer; font-size:17px;
+          border:1px solid var(--c-btn-bd); background:var(--c-btn-bg); color:var(--c-btn-tx); }
 
   /* ---------- chat + asetukset ---------- */
-  .gear { position:fixed; top:calc(12px + env(safe-area-inset-top)); right:14px; z-index:6;
-          width:40px; height:40px; border-radius:50%; cursor:pointer;
-          background:rgba(27,16,48,.75); border:1px solid rgba(138,77,191,.55);
-          color:#a97fa8; font-size:17px; font-family:inherit; }
-  .overlay { position:fixed; inset:0; z-index:8; display:none; touch-action:auto; }
-  .overlay.open { display:flex; flex-direction:column; justify-content:flex-end; }
-  .bg { position:absolute; inset:0; background:rgba(7,4,20,.74); backdrop-filter:blur(7px); }
-  .panel { position:relative; z-index:1; display:flex; flex-direction:column; gap:10px;
-           background:rgba(19,10,36,.94); border-top:1px solid rgba(255,157,69,.4);
-           border-radius:20px 20px 0 0; padding:14px 14px calc(16px + env(safe-area-inset-bottom)); }
-  #chatwrap .panel { height:74vh; }
-  #setwrap .panel { max-height:86vh; overflow-y:auto; }
-  .head { display:flex; align-items:center; justify-content:space-between;
-          color:#ffd9b3; letter-spacing:.32em; text-indent:.32em; font-size:12px; }
-  .x { cursor:pointer; color:#a97fa8; font-size:15px; padding:6px 10px; letter-spacing:0; text-indent:0; }
-  .chatlog { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;
-             padding:4px 2px; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
-  .msg { max-width:88%; padding:9px 13px; border-radius:15px; font-size:14px; line-height:1.5;
-         white-space:pre-wrap; word-break:break-word; user-select:text; }
-  .msg.user { align-self:flex-end; background:rgba(255,140,47,.17); border:1px solid rgba(255,157,69,.5);
-              color:#ffe8d1; border-bottom-right-radius:4px; }
-  .msg.jarvis { align-self:flex-start; background:rgba(199,125,255,.13); border:1px solid rgba(138,77,191,.55);
-                color:#efe3ff; border-bottom-left-radius:4px; }
-  .msg.sys { align-self:center; background:none; border:none; color:#ff8fa3; font-size:11px;
-             letter-spacing:.06em; text-align:center; }
-  .typing { animation:blink 1s steps(2) infinite; letter-spacing:.35em; }
-  @keyframes blink { 50% { opacity:.35; } }
-  .row { display:flex; gap:8px; }
-  .rbtn { width:48px; min-height:48px; border-radius:50%; flex:0 0 48px; cursor:pointer;
-          font-family:inherit; font-size:17px; color:#ffd9b3; background:rgba(27,16,48,.85);
-          border:1px solid rgba(138,77,191,.6); }
-  .rbtn.on { box-shadow:0 0 16px rgba(255,94,120,.65); border-color:rgba(255,94,120,.85); color:#ff8fa8; }
-  .chatrow input { flex:1; min-width:0; border-radius:999px; border:1px solid rgba(138,77,191,.6);
-                   background:rgba(7,4,20,.85); color:#ffe8d1; padding:0 18px; font-family:inherit;
-                   font-size:14px; outline:none; user-select:text; }
+  .overlay { position:fixed; inset:0; z-index:10; display:flex; align-items:flex-end; justify-content:center;
+             opacity:0; pointer-events:none; transition:opacity .25s; }
+  .overlay.open { opacity:1; pointer-events:auto; }
+  .overlay .bg { position:absolute; inset:0; background:rgba(4,2,12,.72); }
+  .overlay .panel { position:relative; width:100%; max-width:560px; max-height:88vh; overflow-y:auto;
+             background:rgba(12,7,24,.96); border:1px solid var(--panel-bd); border-bottom:none;
+             border-radius:22px 22px 0 0; padding:16px 20px calc(20px + env(safe-area-inset-bottom)); }
+  #chatwrap .panel { height:74vh; display:flex; flex-direction:column; }
+  .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .head span:first-child { color:var(--c-state); letter-spacing:.3em; font-size:13px; }
+  .x { cursor:pointer; color:#a97fa8; font-size:18px; padding:4px 8px; }
+  .chatlog { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:4px 2px 10px; }
+  .msg { max-width:82%; padding:9px 13px; border-radius:14px; font-size:14px; line-height:1.45;
+         white-space:pre-wrap; word-break:break-word; }
+  .msg.user { align-self:flex-end; background:rgba(255,157,69,.14); border:1px solid var(--user-bd);
+              color:#ffe4c4; border-bottom-right-radius:4px; }
+  .msg.jarvis { align-self:flex-start; background:rgba(138,77,191,.13); border:1px solid var(--panel-bd);
+                color:#e8dcff; border-bottom-left-radius:4px; }
+  .msg.sys { align-self:center; background:transparent; border:none; color:#ff8fa3; font-size:12px; text-align:center; }
+  .msg.typing { color:#c77dff; letter-spacing:.3em; animation:blink 1s steps(2) infinite; }
+  @keyframes blink { 50%{opacity:.35} }
+  .row { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .chatrow input { flex:1; min-width:0; border-radius:999px; border:1px solid var(--panel-bd);
+                   background:var(--c-btn-bg); color:#ffe4c4; padding:11px 16px; font-family:inherit;
+                   font-size:14px; outline:none; }
   .chatrow input:focus { border-color:rgba(255,157,69,.75); }
-  .lbl { color:#a97fa8; font-size:11px; letter-spacing:.18em; margin-top:4px; }
-  .inp { min-height:44px; border-radius:12px; border:1px solid rgba(138,77,191,.6);
-         background:rgba(7,4,20,.85); color:#ffe8d1; padding:0 14px; font-family:inherit;
-         font-size:14px; outline:none; user-select:text; }
-  .chk { display:flex; align-items:center; gap:10px; color:#ffd9b3; font-size:13px; letter-spacing:.04em; }
-  .chk input { width:18px; height:18px; accent-color:#ff8c2f; }
-  .setrow { display:flex; gap:10px; justify-content:center; margin-top:6px; }
-  #testout { text-align:center; color:#a97fa8; font-size:11px; letter-spacing:.1em; min-height:14px; }
-  .hint { color:#7a6f96; font-size:10px; letter-spacing:.05em; text-align:center; line-height:1.5; }
+  .rbtn { min-width:44px; min-height:44px; border-radius:50%; border:1px solid var(--panel-bd);
+          background:var(--c-btn-bg); color:var(--c-btn-tx); font-size:17px; cursor:pointer; }
+  .rbtn.on { border-color:#ff9d45; box-shadow:0 0 14px rgba(255,157,69,.5); }
+  .lbl { color:#8a6fa8; font-size:11px; letter-spacing:.25em; margin:14px 0 6px; }
+  .inp { width:100%; border-radius:12px; border:1px solid var(--panel-bd); background:var(--c-btn-bg);
+         color:#ffe4c4; padding:10px 14px; font-family:inherit; font-size:14px; outline:none; }
+  .chk { display:flex; align-items:center; gap:10px; color:#d8c8ee; font-size:14px; margin:8px 0; cursor:pointer; }
+  .chk input { width:18px; height:18px; accent-color:#8a4dbf; flex:none; }
+  .setrow { display:flex; gap:10px; margin-top:14px; }
+  .setrow .btn { flex:1; }
+  .hint { color:#8f7fae; font-size:12px; line-height:1.5; margin-top:10px; }
+  #testout { min-height:18px; margin-top:10px; font-size:13px; letter-spacing:.08em; color:#a97fa8; }
 </style>
 </head>
-<body>
+<body class="fire">
+<div class="bgart"></div>
 <canvas id="stars"></canvas>
 <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
 
@@ -141,59 +184,59 @@
   <svg viewBox="0 0 500 500">
     <defs>
       <radialGradient id="gcore" cx="50%" cy="50%" r="50%">
-        <stop offset="0%"  stop-color="#fff7ea"/>
-        <stop offset="30%" stop-color="#ffd166"/>
-        <stop offset="62%" stop-color="#ff8c2f"/>
-        <stop offset="100%" stop-color="#c92a12"/>
+        <stop class="s1" offset="0%"  stop-color="#fff7ea"/>
+        <stop class="s2" offset="30%" stop-color="#ffd166"/>
+        <stop class="s3" offset="62%" stop-color="#ff8c2f"/>
+        <stop class="s4" offset="100%" stop-color="#c92a12"/>
       </radialGradient>
       <radialGradient id="ginner" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="rgba(255,190,120,.92)"/>
-        <stop offset="100%" stop-color="rgba(255,120,60,0)"/>
+        <stop class="s1" offset="0%" stop-color="rgba(255,190,120,.92)"/>
+        <stop class="s2" offset="100%" stop-color="rgba(255,120,60,0)"/>
       </radialGradient>
     </defs>
 
     <circle class="wave" cx="250" cy="250" r="205" fill="none" stroke="#ffb36b" stroke-width="2.5"/>
 
-    <g class="r-ticks" stroke="#7a4f9e" stroke-width="1.4" opacity=".75">
+    <g class="r-ticks ticks" stroke="#7a4f9e" stroke-width="1.4" opacity=".75">
       <circle cx="250" cy="250" r="238" fill="none" stroke-dasharray="2 10"/>
       <circle cx="250" cy="250" r="228" fill="none" stroke-dasharray="26 88" opacity=".5"/>
     </g>
 
     <g class="r-med" fill="none" stroke-linecap="round">
       <circle cx="250" cy="250" r="196" stroke="#2b1638" stroke-width="10"/>
-      <path d="M 250 54 A 196 196 0 0 1 419 152" stroke="#ff9d45" stroke-width="10"/>
-      <path d="M 250 446 A 196 196 0 0 1 81 348" stroke="#ff5e78" stroke-width="10"/>
-      <circle cx="446" cy="250" r="5" fill="#ffe0b3" stroke="none"/>
-      <circle cx="54"  cy="250" r="5" fill="#ffb3d9" stroke="none"/>
+      <path class="arc-a" d="M 250 54 A 196 196 0 0 1 419 152" stroke="#ff9d45" stroke-width="10"/>
+      <path class="arc-b" d="M 250 446 A 196 196 0 0 1 81 348" stroke="#ff5e78" stroke-width="10"/>
+      <circle class="dot-a" cx="446" cy="250" r="5" fill="#ffe0b3" stroke="none"/>
+      <circle class="dot-b" cx="54"  cy="250" r="5" fill="#ffb3d9" stroke="none"/>
     </g>
 
     <g class="r-fast" fill="none" stroke-linecap="round">
       <circle cx="250" cy="250" r="158" stroke="#241233" stroke-width="4"/>
-      <path d="M 250 92 A 158 158 0 0 1 372 158" stroke="#ffb36b" stroke-width="4"/>
-      <path d="M 250 408 A 158 158 0 0 1 128 342" stroke="#c77dff" stroke-width="4"/>
-      <path d="M 128 158 A 158 158 0 0 1 372 342" stroke="#8a4dbf" stroke-width="2.5" stroke-dasharray="4 14"/>
-      <circle cx="250" cy="92"  r="4.5" fill="#fff3dd" stroke="none"/>
-      <circle cx="250" cy="408" r="4.5" fill="#ffd6ec" stroke="none"/>
+      <path class="arc-c" d="M 250 92 A 158 158 0 0 1 372 158" stroke="#ffb36b" stroke-width="4"/>
+      <path class="arc-d" d="M 250 408 A 158 158 0 0 1 128 342" stroke="#c77dff" stroke-width="4"/>
+      <path class="arc-e" d="M 128 158 A 158 158 0 0 1 372 342" stroke="#8a4dbf" stroke-width="2.5" stroke-dasharray="4 14"/>
+      <circle class="dot-c" cx="250" cy="92"  r="4.5" fill="#fff3dd" stroke="none"/>
+      <circle class="dot-d" cx="250" cy="408" r="4.5" fill="#ffd6ec" stroke="none"/>
     </g>
 
     <g class="r-slow" fill="none" stroke="#3a1f4d" stroke-width="1.6" opacity=".85">
       <circle cx="250" cy="250" r="212" stroke-dasharray="60 30 6 30"/>
-      <circle cx="250" cy="38"  r="3" fill="#ff9d45" stroke="none"/>
+      <circle class="dot-e" cx="250" cy="38"  r="3" fill="#ff9d45" stroke="none"/>
     </g>
 
     <g class="r-med" opacity=".9">
-      <path d="M 250 128 L 344 286 L 156 286 Z" fill="none" stroke="#ffb36b" stroke-width="2.2" stroke-linejoin="round"/>
-      <path d="M 250 154 L 321 278 L 179 278 Z" fill="none" stroke="#8a4dbf" stroke-width="1.4" stroke-linejoin="round"/>
+      <path class="arc-c" d="M 250 128 L 344 286 L 156 286 Z" fill="none" stroke="#ffb36b" stroke-width="2.2" stroke-linejoin="round"/>
+      <path class="arc-e" d="M 250 154 L 321 278 L 179 278 Z" fill="none" stroke="#8a4dbf" stroke-width="1.4" stroke-linejoin="round"/>
     </g>
 
     <g class="core" id="coreg">
       <g id="corescale">
         <circle cx="250" cy="250" r="74" fill="url(#ginner)"/>
         <circle cx="250" cy="250" r="46" fill="url(#gcore)"/>
-        <circle cx="250" cy="250" r="46" fill="none" stroke="#ffe8c7" stroke-width="1.6" opacity=".9"/>
+        <circle class="rim" cx="250" cy="250" r="46" fill="none" stroke="#ffe8c7" stroke-width="1.6" opacity=".9"/>
         <circle cx="250" cy="250" r="16" fill="#ffffff" opacity=".95"/>
       </g>
-      <circle cx="250" cy="250" r="86" fill="none" stroke="#7a4f9e" stroke-width="1" stroke-dasharray="3 6" opacity=".8"/>
+      <circle class="dashring" cx="250" cy="250" r="86" fill="none" stroke="#7a4f9e" stroke-width="1" stroke-dasharray="3 6" opacity=".8"/>
     </g>
   </svg>
 </div>
@@ -226,9 +269,12 @@
   <div class="bg" id="setbg"></div>
   <div class="panel">
     <div class="head"><span>ASETUKSET</span><span class="x" id="setclose">✕</span></div>
+    <div class="lbl">TEEMA</div>
+    <label class="chk"><input type="radio" name="theme" id="themefire"> TULI — tulinen orbi</label>
+    <label class="chk"><input type="radio" name="theme" id="themeice"> JÄÄ — sininen orbi</label>
     <div class="lbl">AIVOT — VALITSE MOOTTORI</div>
     <label class="chk"><input type="radio" name="engine" id="engpoll" value="pollinations"> Pollinations — ilmainen &amp; rajaton, ei avainta</label>
-    <label class="chk"><input type="radio" name="engine" id="enggem" value="gemini"> Google Gemini — vahvempi ajattelu 🔥</label>
+    <label class="chk"><input type="radio" name="engine" id="enggem" value="gemini"> Google Gemini — vahvempi ajattelu</label>
     <div class="lbl">AVAIN (vain Gemini)</div>
     <input class="inp" id="apikey" type="password" placeholder="Ei tarvita Pollinationsilla" autocomplete="off">
     <div class="lbl">MALLI (voi jättää tyhjäksi)</div>
@@ -245,6 +291,18 @@
 </div>
 
 <script>
+  /* ---------- teema ---------- */
+  const $ = id => document.getElementById(id);
+  const metaTheme = $('metatheme');
+  let theme = 'fire';
+  try { theme = localStorage.getItem('jarvis_theme') === 'ice' ? 'ice' : 'fire'; } catch(e){}
+  function applyTheme(){
+    document.body.classList.toggle('fire', theme !== 'ice');
+    document.body.classList.toggle('ice', theme === 'ice');
+    metaTheme.content = theme === 'ice' ? '#050a24' : '#0d0524';
+  }
+  applyTheme();
+
   /* ---------- starfield ---------- */
   const cv = document.getElementById('stars'), ctx = cv.getContext('2d');
   let stars = [];
@@ -278,6 +336,7 @@
   const stage = document.getElementById('stage');
   const stateEl = document.getElementById('state');
   let listening = false, micOn = false, cooldown = false;
+  let busy = null;              /* null | AJATTELEE | PUHUU | KUUNTELEE */
   function ping(){
     if (cooldown) return; cooldown = true;
     stage.classList.remove('burst'); void stage.offsetWidth; stage.classList.add('burst');
@@ -361,15 +420,14 @@
   addEventListener('appinstalled', () => installBtn.classList.remove('show'));
 
   /* ================= CHAT + TEKOÄLY + PUHE ================= */
-  const $ = id => document.getElementById(id);
   const chatWrap = $('chatwrap'), chatLog = $('chatlog'), chatInput = $('chatinput');
   const sendBtn = $('sendbtn'), talkBtn = $('talkbtn');
   const setWrap = $('setwrap');
   const keyIn = $('apikey'), modelIn = $('model');
   const engPoll = $('engpoll'), engGem = $('enggem'), engHint = $('enghint');
+  const themeFire = $('themefire'), themeIce = $('themeice');
   const ttsChk = $('ttschk'), autoChk = $('autochk'), testOut = $('testout');
 
-  let busy = null;              /* null | KUUNTELEE | AJATTELEE | PUHUU */
   let history = [];             /* {role: 'user'|'model', text} */
   const LS = {
     get(k, d){ try { const v = JSON.parse(localStorage.getItem(k)); return v === null || v === undefined ? d : v; } catch(e){ return d; } },
@@ -391,7 +449,7 @@
   function setBusy(s){
     busy = s;
     stateEl.textContent = s || (micOn ? (lv > .09 ? 'KUUNTELEE' : 'VALMIINA') : (listening ? 'KUUNTELEE' : 'VALMIINA'));
-    stateEl.style.color = s === 'AJATTELEE' ? '#c77dff' : s === 'PUHUU' ? '#ff9d45' : s === 'KUUNTELEE' ? '#ff8fa8' : '#ffb36b';
+    stateEl.style.color = s === 'AJATTELEE' ? '#c77dff' : s === 'PUHUU' ? '#ff9d45' : s === 'KUUNTELEE' ? '#ff8fa8' : '';
   }
 
   /* ---------- chat UI ---------- */
@@ -408,35 +466,11 @@
     if (!history.length) addMsg('sys', 'Kirjoita viesti tai napauta 🎙 ja puhu');
     for (const m of history) addMsg(m.role === 'user' ? 'user' : 'jarvis', m.text);
   }
-  chatWrap.classList; /* noop */
   $('chatopen').addEventListener('click', () => { chatWrap.classList.add('open'); renderChat(); setTimeout(()=>chatInput.focus(), 300); });
   $('chatclose').addEventListener('click', () => chatWrap.classList.remove('open'));
   $('chatbg').addEventListener('click', () => chatWrap.classList.remove('open'));
 
-  $('setbtn').addEventListener('click', () => {
-    engPoll.checked = cfg.engine !== 'gemini'; engGem.checked = cfg.engine === 'gemini';
-    keyIn.value = cfg.key; modelIn.value = cfg.model;
-    ttsChk.checked = cfg.tts; autoChk.checked = cfg.auto;
-    testOut.textContent = ''; testOut.style.color = '#a97fa8';
-    syncEngineUI();
-    setWrap.classList.add('open');
-  });
-  $('setclose').addEventListener('click', () => setWrap.classList.remove('open'));
-  $('setbg').addEventListener('click', () => setWrap.classList.remove('open'));
-  function saveSet(){
-    cfg.engine = engGem.checked ? 'gemini' : 'pollinations';
-    cfg.key = keyIn.value.trim();
-    cfg.model = modelIn.value.trim();
-    cfg.tts = ttsChk.checked; cfg.auto = autoChk.checked;
-    saveCfg();
-    testOut.textContent = 'TALLENNETTU ✓'; testOut.style.color = '#7ee2a8';
-  }
-  $('saveset').addEventListener('click', saveSet);
-
-  /* ---------- TEKOÄLY: moottorit — Pollinations (ilmainen) & Gemini (tehokas) ---------- */
-  const AI_URL = 'https://text.pollinations.ai/openai';
-  const PERSONA = 'Olet J.A.R.V.I.S, Wegelle henkilökohtainen tekoälyavustaja. Vastaa aina suomeksi. Ole tiivis: 1-4 lausetta ellei erikseen pyydetä pidempää vastausta. Olet tyylikäs, ystävällinen ja hienovaraisen ironinen — kuten Iron Man -elokuvien Jarvis. Osoita käyttäjäästä nimellä Wege silloin tällöin. Vastauksesi on puhuttua tekstiä: ei markdownia, ei listoja, ei hymiöitä, ei tähtimerkkejä. Älä väitä tietäväsi asioita, joita et tiedä.';
-
+  /* ---------- asetukset ---------- */
   const ENGINE_DEFAULTS = {
     pollinations: {
       model: 'openai-fast',
@@ -459,6 +493,36 @@
   }
   engPoll.addEventListener('change', syncEngineUI);
   engGem.addEventListener('change', syncEngineUI);
+  themeFire.addEventListener('change', () => { theme = 'fire'; applyTheme(); });
+  themeIce.addEventListener('change', () => { theme = 'ice'; applyTheme(); });
+
+  $('setbtn').addEventListener('click', () => {
+    themeFire.checked = theme !== 'ice'; themeIce.checked = theme === 'ice';
+    engPoll.checked = cfg.engine !== 'gemini'; engGem.checked = cfg.engine === 'gemini';
+    keyIn.value = cfg.key; modelIn.value = cfg.model;
+    ttsChk.checked = cfg.tts; autoChk.checked = cfg.auto;
+    testOut.textContent = ''; testOut.style.color = '#a97fa8';
+    syncEngineUI();
+    setWrap.classList.add('open');
+  });
+  $('setclose').addEventListener('click', () => setWrap.classList.remove('open'));
+  $('setbg').addEventListener('click', () => setWrap.classList.remove('open'));
+  function saveSet(){
+    theme = themeIce.checked ? 'ice' : 'fire';
+    try { localStorage.setItem('jarvis_theme', theme); } catch(e){}
+    applyTheme();
+    cfg.engine = engGem.checked ? 'gemini' : 'pollinations';
+    cfg.key = keyIn.value.trim();
+    cfg.model = modelIn.value.trim();
+    cfg.tts = ttsChk.checked; cfg.auto = autoChk.checked;
+    saveCfg();
+    testOut.textContent = 'TALLENNETTU ✓'; testOut.style.color = '#7ee2a8';
+  }
+  $('saveset').addEventListener('click', saveSet);
+
+  /* ---------- TEKOÄLY: moottorit — Pollinations (ilmainen) & Gemini (tehokas) ---------- */
+  const AI_URL = 'https://text.pollinations.ai/openai';
+  const PERSONA = 'Olet J.A.R.V.I.S, Wegelle henkilökohtainen tekoälyavustaja. Vastaa aina suomeksi. Ole tiivis: 1-4 lausetta ellei erikseen pyydetä pidempää vastausta. Olet tyylikäs, ystävällinen ja hienovaraisen ironinen — kuten Iron Man -elokuvien Jarvis. Osoita käyttäjäästä nimellä Wege silloin tällöin. Vastauksesi on puhuttua tekstiä: ei markdownia, ei listoja, ei hymiöitä, ei tähtimerkkejä. Älä väitä tietäväsi asioita, joita et tiedä.';
 
   function askOnce(msgs, signal){
     return fetch(AI_URL, {
@@ -627,9 +691,9 @@
       if (out.ok && out.reply){ testOut.textContent = 'YHTEYS OK ✓'; testOut.style.color = '#7ee2a8'; }
       else if (out.ok){ testOut.textContent = 'YHTEYS OK, vastaus tyhjä'; testOut.style.color = '#7ee2a8'; }
       else {
-        const busy = (out.status === 429 || out.status === 402);
+        const busyNow = (out.status === 429 || out.status === 402);
         const why = (out.status === 400 || out.status === 403) ? ' — avain tai malli väärin?'
-                  : busy ? (cfg.engine === 'gemini' ? ' — nopeusraja, odota hetki' : ' — ruuhkaa, kokeile ~30 s päästä') : '';
+                  : busyNow ? (cfg.engine === 'gemini' ? ' — nopeusraja, odota hetki' : ' — ruuhkaa, kokeile ~30 s päästä') : '';
         testOut.textContent = 'VIRHE ' + out.status + why;
         testOut.style.color = '#ff8fa3';
       }
