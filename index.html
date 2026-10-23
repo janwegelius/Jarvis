@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- J.A.R.V.I.S v9 — vapaa ketju: GLM → ilmainen glm-4.7-flash → varmoottori | v8 GLM-silta + orb-ikonit -->
+<!-- J.A.R.V.I.S v11 — moottorijono: OMA-AI (kotikone, Ollama) → valittu moottori (GLM) → varmoottori. Vaihto täysin automaattinen, avaimet säilyvät per moottori, ei käsipelin moottorinvaihtoja | rev 10 think-suodatin -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -245,6 +245,11 @@
     <input class="inp" id="apikey" type="password" placeholder="Ei tarvita Pollinationsilla" autocomplete="off">
     <div class="lbl">MALLI (voi jättää tyhjäksi)</div>
     <input class="inp" id="model" type="text" placeholder="openai-fast" autocomplete="off">
+    <div class="lbl">OMA-AI — KOTIKONE (Ollama, valinnainen)</div>
+    <input class="inp" id="ollamaurl" type="text" placeholder="http://192.168.x.x:11434/v1 — tyhjä = pois" autocomplete="off">
+    <div class="lbl">OMA-AI MALLI</div>
+    <input class="inp" id="ollamamodel" type="text" placeholder="gpt-oss:20b" autocomplete="off">
+    <div class="hint" id="olhint">Moottorijono: OMA-AI (kun osoite annettu ja kone kotiverkossa) → valittu moottori (GLM) → varmoottori. Vaihto täysin automaattinen — jos ykkönen ei vastaa, seuraava jatkaa heti. Avaimet ja osoitteet säilyvät kussakin moottorissa erikseen.</div>
     <div class="lbl">TEEMA</div>
     <label class="chk"><input type="radio" name="theme" id="thdark" value="dark"> Tumma — tähtitaivas (oletus)</label>
     <label class="chk"><input type="radio" name="theme" id="thfire" value="fire"> Tuli 🔥 — tulitausta</label>
@@ -387,6 +392,7 @@
   const sendBtn = $('sendbtn'), talkBtn = $('talkbtn');
   const setWrap = $('setwrap');
   const keyIn = $('apikey'), modelIn = $('model'), urlIn = $('glmurl');
+  const ollamaIn = $('ollamaurl'), olModelIn = $('ollamamodel');
   const keyLbl = $('keylbl'), urlLbl = $('urllbl');
   const engPoll = $('engpoll'), engGem = $('enggem'), engGlm = $('engglm'), engHint = $('enghint');
   const thDark = $('thdark'), thFire = $('thfire'), thIce = $('thice'), themeBg = $('themebg');
@@ -412,6 +418,8 @@
     tts:    LS.get('jarvis_tts', true),
     auto:   LS.get('jarvis_auto', true),
     glmurl: LS.get('jarvis_glmurl', ''),
+    ollamaurl:   LS.get('jarvis_ollamaurl', ''),
+    ollamamodel: LS.get('jarvis_ollamamodel', ''),
     /* malli muistetaan per moottori — ei sekoitu enää eri moottorien välillä */
     modelmap: (function(){
       const saved = LS.get('jarvis_modelmap', null);
@@ -430,6 +438,7 @@
     LS.set('jarvis_voice',cfg.voice); LS.set('jarvis_rate',cfg.rate); LS.set('jarvis_pitch',cfg.pitch);
     LS.set('jarvis_tts',cfg.tts); LS.set('jarvis_auto',cfg.auto);
     LS.set('jarvis_glmurl',cfg.glmurl); LS.set('jarvis_modelmap',cfg.modelmap);
+    LS.set('jarvis_ollamaurl',cfg.ollamaurl); LS.set('jarvis_ollamamodel',cfg.ollamamodel);
   }
   function saveChat(){ LS.set('jarvis_chat', history.slice(-40)); }
 
@@ -461,6 +470,7 @@
   $('setbtn').addEventListener('click', () => {
     engPoll.checked = cfg.engine === 'pollinations'; engGem.checked = cfg.engine === 'gemini'; engGlm.checked = cfg.engine === 'glm';
     keyIn.value = cfg.key; urlIn.value = cfg.glmurl;
+    ollamaIn.value = cfg.ollamaurl; olModelIn.value = cfg.ollamamodel;
     thDark.checked = cfg.theme !== 'fire' && cfg.theme !== 'ice'; thFire.checked = cfg.theme === 'fire'; thIce.checked = cfg.theme === 'ice';
     ttsChk.checked = cfg.tts; autoChk.checked = cfg.auto;
     populateVoices(); syncVoiceUI();
@@ -475,6 +485,8 @@
     cfg.key = keyIn.value.trim();
     cfg.modelmap[cfg.engine] = modelIn.value.trim();
     cfg.glmurl = urlIn.value.trim();
+    cfg.ollamaurl = ollamaIn.value.trim();
+    cfg.ollamamodel = olModelIn.value.trim();
     cfg.tts = ttsChk.checked; cfg.auto = autoChk.checked;
     saveCfg();
     testOut.textContent = 'TALLENNETTU ✓'; testOut.style.color = '#7ee2a8';
@@ -533,6 +545,18 @@
 
   /* ---------- TEKOÄLY: moottorit — Pollinations (ilmainen) & Gemini (tehokas) ---------- */
   const AI_URL = 'https://text.pollinations.ai/openai';
+  /* REV 10: GLM on kiinalainen aivo — se miettii <think>-lohkossa usein kiinaksi
+     ennen suomenkielistä vastausta. Suodatin piilottaa miettimisen kokonaan,
+     chatissa näkyy vain lopullinen suomenkielinen vastaus. */
+  function suodata(reply){
+    return String(reply)
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/<think>[\s\S]*$/i, '')
+      .replace(/<\/?(?:think|reasoning|thought)>/gi, '')
+      .replace(/<[^>]{0,80}>/g, '')
+      .replace(/[*_#`]/g, '')
+      .trim();
+  }
   const PERSONA = 'Olet J.A.R.V.I.S, Wegelle henkilökohtainen tekoälyavustaja. Vastaa aina suomeksi. Ole tiivis: 1-4 lausetta ellei erikseen pyydetä pidempää vastausta. Olet tyylikäs, ystävällinen ja hienovaraisen ironinen — kuten Iron Man -elokuvien Jarvis. Osoita käyttäjäästä nimellä Wege silloin tällöin. Vastauksesi on puhuttua tekstiä: ei markdownia, ei listoja, ei hymiöitä, ei tähtimerkkejä. Älä väitä tietäväsi asioita, joita et tiedä.';
 
   const ENGINE_DEFAULTS = {
@@ -592,7 +616,7 @@
     const status = res ? res.status : 0;
     let reply = '';
     try { reply = ((((data.choices || [])[0] || {}).message || {}).content) || ''; } catch(e){}
-    reply = String(reply).replace(/[*_#`>]/g, '').trim();
+    reply = suodata(reply);
     return { ok: res ? res.ok : false, status: status, reply: reply };
   }
 
@@ -684,7 +708,8 @@
       const errc = data && data.error ? data.error : {};
       let reply = '';
       try { reply = ((((data.choices || [])[0] || {}).message || {}).content) || ''; } catch(e){}
-      reply = String(reply).replace(/[*_#`>]/g, '').trim();
+      reply = suodata(reply);
+      if (!reply) return { ok: false, status: res.status, code: String(errc.code || 'TYHJA'), errmsg: 'vastaus sisälsi vain miettimistä', reply: '' };
       return { ok: !!res.ok, status: res.status, code: String(errc.code || ''), errmsg: String(errc.message || ''), reply: reply };
     } catch(e){
       return { ok: false, status: 0, code: 'TIMEOUT', errmsg: (e && e.name) || '', reply: '' };
@@ -718,11 +743,54 @@
     return p;
   }
 
-  function askAI(msgs, ctrl){
-    return cfg.engine === 'gemini' ? askGemini(msgs, ctrl)
-         : cfg.engine === 'glm' ? askGLM(msgs, ctrl)
-         : askPollinations(msgs, ctrl);
+  /* REV 11 OMA-AI: kotikoneen Ollama (OpenAI-yhteensopiva /v1/chat/completions).
+     Lyhyt aikakatkaisu (8 s) — jos konetta ei ole saavutettavissa (puhelin muualla
+     kuin kotiverkossa), ketju jatkaa heti seuraavaan moottoriin ilman odottelua. */
+  async function ollamaCall(msgs, ctrl){
+    let base = (cfg.ollamaurl || '').trim().replace(/\/+$/, '');
+    if (!base) return { ok:false, status:0, reply:'', code:'EI_OSOTETTA' };
+    if (!/^https?:\/\//i.test(base)) base = 'http://' + base;
+    const model = (cfg.ollamamodel || '').trim() || 'gpt-oss:20b';
+    const ac = ('AbortController' in window) ? new AbortController() : null;
+    let timer = null;
+    if (ac) timer = setTimeout(() => { try { ac.abort(); } catch(e){} }, 8000);
+    try {
+      const res = await fetch(base + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: ac ? ac.signal : (ctrl ? ctrl.signal : undefined),
+        body: JSON.stringify({ model: model, messages: msgs, stream: false, temperature: 0.7, max_tokens: 400 })
+      });
+      const data = await res.json().catch(()=>({}));
+      let reply = '';
+      try { reply = ((((data.choices || [])[0] || {}).message || {}).content) || ''; } catch(e){}
+      reply = suodata(reply);
+      if (!reply) return { ok:false, status:res.status, code:'TYHJA', reply:'' };
+      return { ok:!!res.ok, status:res.status, reply:reply, model:model, local:true };
+    } catch(e){
+      return { ok:false, status:0, code:'EI_YHTEYTTA', reply:'' };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
+  /* REV 11 moottorijono: OMA-AI (kotikone) → valittu moottori (GLM/Gemini/Pollinations)
+     → varmoottori. Jos ykkönen ei vastaa (ei kotiverkossa / ruuhka), seuraava vastaa
+     automaattisesti — käyttäjän ei tarvitse vaihtaa mitään käsin. */
+  async function askAI(msgs, ctrl){
+    let olSkip = false;
+    if (cfg.ollamaurl){
+      const o = await ollamaCall(msgs, ctrl);
+      if (o.ok) return o;
+      olSkip = true;
+    }
+    const out = cfg.engine === 'gemini' ? await askGemini(msgs, ctrl)
+             : cfg.engine === 'glm' ? await askGLM(msgs, ctrl)
+             : await askPollinations(msgs, ctrl);
+    if (olSkip) out.ollamaskip = true;
+    return out;
+  }
+
+  let olTold = false;           /* Oma-AI-poikkeusviesti näytetään vain kerran per istunto */
 
   async function askJarvis(text){
     if (!text) return;
@@ -773,6 +841,8 @@
       history.push({ role:'model', text: out.reply });
       saveChat();
       if (out.fallback) addMsg('sys', '⚡ GLM ei vastannut (' + (out.sawBalance ? 'ei saldoa' : out.sawBusy ? 'ruuhka' : 'virhe ' + (out.glmstatus || '?')) + ') — varmoottori hoiti vastauksen');
+      if (out.local) addMsg('sys', '🏠 Oma-AI (kotikone) vastasi');
+      else if (out.ollamaskip && !olTold){ olTold = true; addMsg('sys', '⚡ Oma-AI ei saavutettavissa — aivot vaihtuivat automaattisesti (asetus pysyy tallessa)'); }
       speak(out.reply);
     } catch (err) {
       if (timer) clearTimeout(timer);
@@ -847,15 +917,19 @@
     try {
       const out = await askAI([{ role:'user', content: 'Sano lyhyesti: yhteys OK' }], null);
       if (out.needkey){ testOut.textContent = 'ANNA AVAIN ENSIN — aistudio.google.com'; testOut.style.color = '#ff8fa3'; return; }
+      const olpre = cfg.ollamaurl ? (out.local ? 'OMA-AI ✓ | ' : 'OMA-AI ✗ (kotikone ei vastaa) | ') : '';
       if (out.ok && out.reply){
-        if (cfg.engine === 'glm' && out.fallback){
-          testOut.textContent = 'GLM ei vastannut (' + (out.sawBalance ? 'ei saldoa' : out.sawBusy ? 'ruuhka' : 'virhe ' + (out.glmstatus || '?')) + ') — varmoottori vastasi ✓';
+        if (out.local){
+          testOut.textContent = 'OMA-AI ✓ (' + (out.model || 'kotikone') + ') — jonon ykkönen vastaa, GLM:ää ei testattu ✓';
+          testOut.style.color = '#7ee2a8';
+        } else if (cfg.engine === 'glm' && out.fallback){
+          testOut.textContent = olpre + 'GLM ei vastannut (' + (out.sawBalance ? 'ei saldoa' : out.sawBusy ? 'ruuhka' : 'virhe ' + (out.glmstatus || '?')) + ') — varmoottori vastasi ✓';
           testOut.style.color = '#ffb36b';
         } else {
-          testOut.textContent = 'YHTEYS OK ✓' + (out.model ? ' (' + out.model + ')' : ''); testOut.style.color = '#7ee2a8';
+          testOut.textContent = olpre + 'YHTEYS OK ✓' + (out.model ? ' (' + out.model + ')' : ''); testOut.style.color = '#7ee2a8';
         }
       }
-      else if (out.ok){ testOut.textContent = 'YHTEYS OK, vastaus tyhjä'; testOut.style.color = '#7ee2a8'; }
+      else if (out.ok){ testOut.textContent = olpre + 'YHTEYS OK, vastaus tyhjä'; testOut.style.color = '#7ee2a8'; }
       else if (cfg.engine === 'glm' && out.fallback === false && out.glmstatus){
         const gs = out.glmstatus;
         const why = gs === 401 || gs === 403 ? ' — silta ei tunnista avainta (ZAI_KEY?)'
@@ -863,7 +937,7 @@
                   : out.sawBalance ? ' — GLM-tilillä ei saldoa; varmoottori hoitaa chatin sillä välin'
                   : (out.sawBusy || gs === 429 || gs >= 500) ? ' — GLM ruuhkainen; varmoottori hoitaa chatin sillä välin'
                   : '';
-        testOut.textContent = 'GLM EI VASTANNUT (' + gs + ')' + why + ' — varmoottori ' + (out.ok ? 'OK ✓' : 'eikäy');
+        testOut.textContent = olpre + 'GLM EI VASTANNUT (' + gs + ')' + why + ' — varmoottori ' + (out.ok ? 'OK ✓' : 'eikäy');
         testOut.style.color = '#ffb36b';
       }
       else {
@@ -872,7 +946,7 @@
                   : out.status === 401 ? ' — avain väärin?'
                   : out.status === 404 ? ' — mallia ei löytynyt'
                   : busy ? ' — ruuhkaa, kokeile ~30 s päästä' : '';
-        testOut.textContent = 'VIRHE ' + out.status + why;
+        testOut.textContent = olpre + 'VIRHE ' + out.status + why;
         testOut.style.color = '#ff8fa3';
       }
     } catch(e) {
