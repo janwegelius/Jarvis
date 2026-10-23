@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- J.A.R.V.I.S v14 — oma pyörre + HUD-renkaat (täsmäversio) — moottorijono: OMA-AI (kotikone, Ollama) → valittu moottori (GLM) → varmoottori. Vaihto täysin automaattinen, avaimet säilyvät per moottori, ei käsipelin moottorinvaihtoja | rev 10 think-suodatin -->
+<!-- J.A.R.V.I.S v15 — pyörre-ikoni ytimessä, reagoi puheeseen (orbi+kaaret -> käyttäjän oma ikoni) — moottorijono: OMA-AI (kotikone, Ollama) → valittu moottori (GLM) → varmoottori. Vaihto täysin automaattinen, avaimet säilyvät per moottori, ei käsipelin moottorinvaihtoja | rev 10 think-suodatin -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -159,6 +159,7 @@
         <stop offset="0%" stop-color="rgba(255,190,120,.92)"/>
         <stop offset="100%" stop-color="rgba(255,120,60,0)"/>
       </radialGradient>
+      <clipPath id="iconclip"><circle cx="250" cy="250" r="80"/></clipPath>
     </defs>
 
     <circle class="wave" cx="250" cy="250" r="205" fill="none" stroke="#ffb36b" stroke-width="2.5"/>
@@ -170,10 +171,6 @@
 
     <g class="r-med" fill="none" stroke-linecap="round">
       <circle cx="250" cy="250" r="196" stroke="#2b1638" stroke-width="10"/>
-      <path d="M 250 54 A 196 196 0 0 1 419 152" stroke="#ff9d45" stroke-width="10"/>
-      <path d="M 250 446 A 196 196 0 0 1 81 348" stroke="#ff5e78" stroke-width="10"/>
-      <circle cx="446" cy="250" r="5" fill="#ffe0b3" stroke="none"/>
-      <circle cx="54"  cy="250" r="5" fill="#ffb3d9" stroke="none"/>
     </g>
 
     <g class="r-fast" fill="none" stroke-linecap="round">
@@ -197,10 +194,8 @@
 
     <g class="core" id="coreg">
       <g id="corescale">
-        <circle cx="250" cy="250" r="74" fill="url(#ginner)"/>
-        <circle cx="250" cy="250" r="46" fill="url(#gcore)"/>
-        <circle cx="250" cy="250" r="46" fill="none" stroke="#ffe8c7" stroke-width="1.6" opacity=".9"/>
-        <circle cx="250" cy="250" r="16" fill="#ffffff" opacity=".95"/>
+        <circle cx="250" cy="250" r="84" fill="url(#ginner)"/>
+        <image href="icon-512.png" x="170" y="170" width="160" height="160" clip-path="url(#iconclip)" preserveAspectRatio="xMidYMid slice"/>
       </g>
       <circle cx="250" cy="250" r="86" fill="none" stroke="#7a4f9e" stroke-width="1" stroke-dasharray="3 6" opacity=".8"/>
     </g>
@@ -323,7 +318,7 @@
   let audio = null, lv = 0;
 
   function loop(){
-    const sc = 1 + Math.min(.22, lv*.5);
+    const sc = 1 + Math.min(.32, lv*.7);
     coreScale.setAttribute('transform', `scale(${sc.toFixed(3)}) ` );
     coreScale.style.transformOrigin = '250px 250px';
     halo.style.opacity = (0.75 + Math.min(.25, lv*.6)).toFixed(2);
